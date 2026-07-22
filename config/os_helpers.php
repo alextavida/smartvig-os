@@ -1,0 +1,126 @@
+<?php
+/**
+ * Funcoes auxiliares compartilhadas pelos endpoints de OS:
+ * historico (timeline), notificacoes (substitui push/FCM) e controle de acesso.
+ */
+
+declare(strict_types=1);
+
+require_once __DIR__ . '/database.php';
+
+function registrarHistorico(PDO $pdo, int $osId, ?int $usuarioId, string $acao, ?string $detalhe = null): void
+{
+    $stmt = $pdo->prepare(
+        'INSERT INTO historico_os (os_id, usuario_id, acao, detalhe) VALUES (:os_id, :usuario_id, :acao, :detalhe)'
+    );
+    $stmt->execute([
+        'os_id' => $osId,
+        'usuario_id' => $usuarioId,
+        'acao' => $acao,
+        'detalhe' => $detalhe,
+    ]);
+}
+
+function criarNotificacao(PDO $pdo, int $usuarioId, ?int $osId, string $tipo, string $titulo, string $mensagem): void
+{
+    $stmt = $pdo->prepare(
+        'INSERT INTO notificacoes (usuario_id, os_id, tipo, titulo, mensagem) VALUES (:usuario_id, :os_id, :tipo, :titulo, :mensagem)'
+    );
+    $stmt->execute([
+        'usuario_id' => $usuarioId,
+        'os_id' => $osId,
+        'tipo' => $tipo,
+        'titulo' => $titulo,
+        'mensagem' => $mensagem,
+    ]);
+}
+
+/**
+ * Envia notificacao para todos os gestores ativos.
+ */
+function notificarGestores(PDO $pdo, ?int $osId, string $tipo, string $titulo, string $mensagem): void
+{
+    $stmt = $pdo->query("SELECT id FROM usuarios WHERE perfil = 'gestor' AND ativo = 1");
+    foreach ($stmt->fetchAll() as $gestor) {
+        criarNotificacao($pdo, (int) $gestor['id'], $osId, $tipo, $titulo, $mensagem);
+    }
+}
+
+/**
+ * Envia notificacao para todos os tecnicos atribuidos a uma OS.
+ */
+function notificarTecnicosDaOs(PDO $pdo, int $osId, string $tipo, string $titulo, string $mensagem): void
+{
+    $stmt = $pdo->prepare('SELECT tecnico_id FROM os_tecnicos WHERE os_id = :os_id');
+    $stmt->execute(['os_id' => $osId]);
+    foreach ($stmt->fetchAll() as $linha) {
+        criarNotificacao($pdo, (int) $linha['tecnico_id'], $osId, $tipo, $titulo, $mensagem);
+    }
+}
+
+/**
+ * Retorna o gc_situacao_id configurado para uma situacao local, ou null se nao configurado.
+ */
+function obterSituacaoGcId(string $situacaoLocal): ?int
+{
+    $mapa = [
+        'aberto' => 'gc_situacao_aberto',
+        'em_andamento' => 'gc_situacao_em_andamento',
+        'pausado' => 'gc_situacao_pausado',
+        'reagendado' => 'gc_situacao_reagendado',
+        'concluido' => 'gc_situacao_concluido',
+        'cancelado' => 'gc_situacao_cancelado',
+    ];
+
+    if (!isset($mapa[$situacaoLocal])) {
+        return null;
+    }
+
+    $valor = obterConfiguracao($mapa[$situacaoLocal]);
+
+    return ($valor === null || $valor === '') ? null : (int) $valor;
+}
+
+/**
+ * Busca uma OS pelo id local, aplicando controle de acesso:
+ * - gestor: acessa qualquer OS
+ * - tecnico: so acessa OS as quais esteja atribuido
+ * Responde com erro 403/404 e encerra a execucao se nao encontrar/nao autorizado.
+ */
+function buscarOsOuFalhar(PDO $pdo, int $osId, array $payloadJwt): array
+{
+    $stmt = $pdo->prepare('SELECT * FROM ordens_servico WHERE id = :id LIMIT 1');
+    $stmt->execute(['id' => $osId]);
+    $os = $stmt->fetch();
+
+    if (!$os) {
+        responderErro('Ordem de servico nao encontrada.', 404);
+    }
+
+    if ($payloadJwt['perfil'] === 'tecnico') {
+        $stmtAcesso = $pdo->prepare('SELECT 1 FROM os_tecnicos WHERE os_id = :os_id AND tecnico_id = :tecnico_id LIMIT 1');
+        $stmtAcesso->execute(['os_id' => $osId, 'tecnico_id' => $payloadJwt['usuario_id']]);
+        if (!$stmtAcesso->fetch()) {
+            responderErro('Voce nao tem acesso a esta ordem de servico.', 403);
+        }
+    }
+
+    return $os;
+}
+
+/**
+ * Lista os tecnicos atribuidos a uma OS, indicando quem e o responsavel.
+ */
+function listarTecnicosDaOs(PDO $pdo, int $osId): array
+{
+    $stmt = $pdo->prepare(
+        'SELECT u.id, u.nome, u.email, ot.responsavel
+         FROM os_tecnicos ot
+         INNER JOIN usuarios u ON u.id = ot.tecnico_id
+         WHERE ot.os_id = :os_id
+         ORDER BY ot.responsavel DESC, u.nome ASC'
+    );
+    $stmt->execute(['os_id' => $osId]);
+
+    return $stmt->fetchAll();
+}

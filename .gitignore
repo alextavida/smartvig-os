@@ -1,0 +1,32 @@
+# PHP / XAMPP
+*.log
+*.bak
+config/config.php
+
+# Node / React Native
+app-mobile/node_modules/
+app-mobile/.bundle/
+app-mobile/android/.gradle/
+app-mobile/android/app/build/
+app-mobile/android/local.properties
+app-mobile/android/app/release.keystore
+app-mobile/ios/Pods/
+app-mobile/.expo/
+app-mobile/dist/
+
+# Uploads / media
+imgs/os/
+imgs/avatares/
+
+# IDE
+.vscode/
+.idea/
+*.suo
+*.user
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# Setup scripts
+app-mobile/setup_android.ps1

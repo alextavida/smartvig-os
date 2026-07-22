@@ -1,0 +1,258 @@
+<?php
+/**
+ * Detalhe completo da OS: edicao, tecnicos (com fotos), historico, midias, impressao.
+ */
+
+declare(strict_types=1);
+
+$perfisPermitidosPagina = ['gestor'];
+$tituloPagina = 'Detalhe da OS';
+$paginaAtiva = 'os_lista';
+require_once __DIR__ . '/../../includes/header.php';
+require_once __DIR__ . '/../../includes/icons.php';
+require_once __DIR__ . '/../../config/database.php';
+
+$pdo = obterConexao();
+$osId = (int) ($_GET['id'] ?? 0);
+
+$stmt = $pdo->prepare(
+    'SELECT os.*, resp.nome AS tecnico_responsavel_nome
+     FROM ordens_servico os
+     LEFT JOIN usuarios resp ON resp.id = os.tecnico_id
+     WHERE os.id = :id LIMIT 1'
+);
+$stmt->execute(['id' => $osId]);
+$os = $stmt->fetch();
+
+if (!$os) {
+    echo '<div class="card"><div class="alerta alerta-erro">OS nao encontrada.</div></div>';
+    require_once __DIR__ . '/../../includes/footer.php';
+    exit;
+}
+
+$tecnicosAtribuidos = $pdo->prepare(
+    'SELECT u.id, u.nome, u.foto_perfil, ot.responsavel
+     FROM os_tecnicos ot INNER JOIN usuarios u ON u.id = ot.tecnico_id
+     WHERE ot.os_id = :id ORDER BY ot.responsavel DESC, u.nome'
+);
+$tecnicosAtribuidos->execute(['id' => $osId]);
+$tecnicosAtribuidos = $tecnicosAtribuidos->fetchAll();
+$idsAtribuidos = array_column($tecnicosAtribuidos, 'id');
+
+$todosTecnicos = $pdo->query("SELECT id, nome, email, foto_perfil FROM usuarios WHERE perfil = 'tecnico' AND ativo = 1 ORDER BY nome")->fetchAll();
+
+$historico = $pdo->prepare(
+    'SELECT h.acao, h.detalhe, h.criado_em, u.nome AS usuario_nome
+     FROM historico_os h LEFT JOIN usuarios u ON u.id = h.usuario_id
+     WHERE h.os_id = :id ORDER BY h.criado_em DESC'
+);
+$historico->execute(['id' => $osId]);
+$historico = $historico->fetchAll();
+
+$midias = $pdo->prepare('SELECT tipo, caminho_arquivo, nome_arquivo, criado_em FROM midias_os WHERE os_id = :id ORDER BY criado_em DESC');
+$midias->execute(['id' => $osId]);
+$midias = $midias->fetchAll();
+
+$rotulosAcao = [
+    'os_criada' => 'OS criada', 'tecnicos_atribuidos' => 'Tecnicos redefinidos',
+    'os_atualizada' => 'OS atualizada', 'descricao_atualizada' => 'Descricao atualizada',
+    'os_pausada' => 'OS pausada', 'os_reagendada' => 'OS reagendada', 'os_iniciada' => 'OS iniciada',
+    'os_encerrada' => 'OS encerrada', 'midia_enviada' => 'Midia enviada',
+    'produto_adicionado' => 'Produto adicionado', 'falha_sincronizacao_gc' => 'Falha ao sincronizar com GestaoClick',
+    'recebimento_gerado' => 'Recebimento gerado',
+];
+
+function rotuloStatusDet(string $s): string
+{
+    $mapa = ['aberto' => 'Aberto', 'em_andamento' => 'Em andamento', 'pausado' => 'Pausado',
+             'reagendado' => 'Reagendado', 'concluido' => 'Concluido', 'cancelado' => 'Cancelado'];
+    return $mapa[$s] ?? $s;
+}
+
+function inicialTecnico(string $nome): string
+{
+    $iniciais = '';
+    foreach (explode(' ', trim($nome)) as $p) {
+        if ($p !== '') { $iniciais .= mb_strtoupper(mb_substr($p, 0, 1)); }
+        if (mb_strlen($iniciais) >= 2) { break; }
+    }
+    return $iniciais;
+}
+?>
+
+<div class="topbar" style="margin-top:-10px;">
+  <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+    <span class="badge <?= $os['situacao_local'] ?>"><?= rotuloStatusDet($os['situacao_local']) ?></span>
+    <span class="chip-prioridade <?= $os['prioridade'] ?>"><?= ic('flag', 11) ?> <?= ucfirst($os['prioridade']) ?></span>
+  </div>
+  <div class="acoes-tabela no-print">
+    <a href="/app-tecnicos/admin/os/imprimir.php?id=<?= (int) $os['id'] ?>" target="_blank" class="btn btn-neutro btn-sm">
+      <?= ic('imprimir', 14) ?> Imprimir OS
+    </a>
+    <a href="/app-tecnicos/admin/os/lista.php" class="btn btn-neutro btn-sm">
+      <?= ic('voltar', 14) ?> Voltar
+    </a>
+  </div>
+</div>
+
+<div id="alertaDetalhe"></div>
+
+<div class="card">
+  <h3 style="margin-top:0;">OS #<?= (int) $os['id'] ?> &middot; <?= htmlspecialchars($os['cliente_nome'] ?? '-') ?></h3>
+  <form id="formAtualizarOs">
+    <div class="linha-form">
+      <div class="campo"><label>Cliente</label><input type="text" name="cliente_nome" value="<?= htmlspecialchars($os['cliente_nome'] ?? '') ?>"></div>
+      <div class="campo"><label>Telefone</label><input type="tel" name="cliente_telefone" value="<?= htmlspecialchars($os['cliente_telefone'] ?? '') ?>"></div>
+    </div>
+    <div class="campo"><label>Endereco</label><input type="text" name="cliente_endereco" value="<?= htmlspecialchars($os['cliente_endereco'] ?? '') ?>"></div>
+    <div class="linha-form">
+      <div class="campo">
+        <label>Data de agendamento</label>
+        <input type="date" name="data_agendamento" value="<?= htmlspecialchars($os['data_agendamento'] ?? '') ?>">
+      </div>
+      <div class="campo">
+        <label>Prioridade</label>
+        <select name="prioridade">
+          <?php foreach (['baixo' => 'Baixo', 'intermediario' => 'Intermediario', 'urgente' => 'Urgente'] as $v => $l): ?>
+            <option value="<?= $v ?>" <?= $os['prioridade'] === $v ? 'selected' : '' ?>><?= $l ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div class="campo">
+        <label>Status</label>
+        <select name="situacao_local">
+          <?php foreach (['aberto','em_andamento','pausado','reagendado','concluido','cancelado'] as $s): ?>
+            <option value="<?= $s ?>" <?= $os['situacao_local'] === $s ? 'selected' : '' ?>><?= rotuloStatusDet($s) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+    </div>
+    <div class="campo"><label>Observacoes / Laudo</label><textarea name="observacoes"><?= htmlspecialchars($os['observacoes'] ?? '') ?></textarea></div>
+    <button type="submit" class="btn btn-primario"><?= ic('check', 15) ?> Salvar alteracoes</button>
+  </form>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0;"><?= ic('tecnicos') ?> Tecnicos atribuidos</h3>
+  <?php if (!empty($tecnicosAtribuidos)): ?>
+  <div style="display:flex; gap:14px; flex-wrap:wrap; margin-bottom:18px; padding-bottom:16px; border-bottom:1px solid var(--cinza-100);">
+    <?php foreach ($tecnicosAtribuidos as $ta): ?>
+      <div style="display:flex; align-items:center; gap:10px; background:var(--cinza-100); border-radius:var(--raio-sm); padding:8px 14px;">
+        <?php if ($ta['foto_perfil'] && file_exists(__DIR__ . '/../../' . $ta['foto_perfil'])): ?>
+          <img src="/app-tecnicos/<?= htmlspecialchars($ta['foto_perfil']) ?>" class="avatar-foto" alt="">
+        <?php else: ?>
+          <div class="avatar-placeholder" style="width:36px;height:36px;font-size:13px;"><?= inicialTecnico($ta['nome']) ?></div>
+        <?php endif; ?>
+        <div>
+          <div style="font-weight:600; font-size:13.5px;"><?= htmlspecialchars($ta['nome']) ?></div>
+          <?php if ($ta['responsavel']): ?>
+            <div style="font-size:11px; color:var(--azul-700); font-weight:600;">Responsavel</div>
+          <?php endif; ?>
+        </div>
+      </div>
+    <?php endforeach; ?>
+  </div>
+  <?php endif; ?>
+
+  <form id="formTecnicos">
+    <?php foreach ($todosTecnicos as $t): ?>
+      <?php
+        $marcado = in_array($t['id'], $idsAtribuidos, true);
+        $ehResponsavel = false;
+        foreach ($tecnicosAtribuidos as $ta) { if ($ta['id'] === $t['id'] && $ta['responsavel']) { $ehResponsavel = true; } }
+      ?>
+      <div class="tecnico-check">
+        <?php if ($t['foto_perfil'] && file_exists(__DIR__ . '/../../' . $t['foto_perfil'])): ?>
+          <img src="/app-tecnicos/<?= htmlspecialchars($t['foto_perfil']) ?>" class="avatar-foto" alt="">
+        <?php else: ?>
+          <div class="avatar-placeholder" style="width:32px;height:32px;font-size:11px; flex-shrink:0;"><?= inicialTecnico($t['nome']) ?></div>
+        <?php endif; ?>
+        <input type="checkbox" class="chk-tecnico" value="<?= (int) $t['id'] ?>" id="tec_<?= (int) $t['id'] ?>" <?= $marcado ? 'checked' : '' ?>>
+        <label for="tec_<?= (int) $t['id'] ?>" style="margin:0; font-weight:500; flex:1;"><?= htmlspecialchars($t['nome']) ?></label>
+        <label style="margin:0; display:flex; align-items:center; gap:6px; font-weight:400;">
+          <input type="radio" name="responsavel" class="rd-responsavel" value="<?= (int) $t['id'] ?>" <?= $ehResponsavel ? 'checked' : '' ?>> Responsavel
+        </label>
+      </div>
+    <?php endforeach; ?>
+    <button type="submit" class="btn btn-secundario"><?= ic('check', 15) ?> Salvar tecnicos</button>
+  </form>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0;"><?= ic('foto') ?> Midias (fotos e videos)</h3>
+  <?php if (empty($midias)): ?>
+    <div class="vazio" style="padding:30px;"><?= ic('camera', 36) ?><br>Nenhuma midia enviada para esta OS ainda.</div>
+  <?php else: ?>
+    <div class="galeria">
+      <?php foreach ($midias as $m): ?>
+        <div class="item">
+          <?php if ($m['tipo'] === 'foto'): ?>
+            <a href="/app-tecnicos/<?= htmlspecialchars($m['caminho_arquivo']) ?>" target="_blank">
+              <img src="/app-tecnicos/<?= htmlspecialchars($m['caminho_arquivo']) ?>" alt="Foto">
+            </a>
+          <?php else: ?>
+            <video src="/app-tecnicos/<?= htmlspecialchars($m['caminho_arquivo']) ?>" controls></video>
+          <?php endif; ?>
+        </div>
+      <?php endforeach; ?>
+    </div>
+  <?php endif; ?>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0;"><?= ic('os_lista') ?> Historico</h3>
+  <?php if (empty($historico)): ?>
+    <div class="vazio" style="padding:20px;">Sem historico registrado.</div>
+  <?php else: ?>
+    <ul class="timeline">
+      <?php foreach ($historico as $h): ?>
+        <li>
+          <div class="acao"><?= htmlspecialchars($rotulosAcao[$h['acao']] ?? $h['acao']) ?></div>
+          <?php if ($h['detalhe']): ?><div class="detalhe"><?= htmlspecialchars($h['detalhe']) ?></div><?php endif; ?>
+          <div class="quando"><?= htmlspecialchars(date('d/m/Y H:i', strtotime($h['criado_em']))) ?><?= $h['usuario_nome'] ? ' &middot; ' . htmlspecialchars($h['usuario_nome']) : '' ?></div>
+        </li>
+      <?php endforeach; ?>
+    </ul>
+  <?php endif; ?>
+</div>
+
+<script>
+const OS_ID = <?= (int) $os['id'] ?>;
+
+document.getElementById('formAtualizarOs').addEventListener('submit', async function (ev) {
+  ev.preventDefault();
+  const alertaBox = document.getElementById('alertaDetalhe');
+  const fd = new FormData(ev.target);
+  const payload = { os_id: OS_ID };
+  for (const [k, v] of fd.entries()) payload[k] = v;
+  try {
+    await apiPost('/os/atualizar.php', payload);
+    alertaBox.innerHTML = '<div class="alerta alerta-sucesso">Alteracoes salvas com sucesso.</div>';
+    setTimeout(() => window.location.reload(), 900);
+  } catch (e) {
+    alertaBox.innerHTML = '<div class="alerta alerta-erro">Erro: ' + e.message + '</div>';
+  }
+});
+
+document.getElementById('formTecnicos').addEventListener('submit', async function (ev) {
+  ev.preventDefault();
+  const alertaBox = document.getElementById('alertaDetalhe');
+  const marcados = Array.from(document.querySelectorAll('.chk-tecnico:checked')).map(c => parseInt(c.value, 10));
+  if (marcados.length === 0) {
+    alertaBox.innerHTML = '<div class="alerta alerta-erro">Selecione ao menos um tecnico.</div>';
+    return;
+  }
+  const responsavelSelecionado = document.querySelector('.rd-responsavel:checked');
+  const responsavelId = responsavelSelecionado ? parseInt(responsavelSelecionado.value, 10) : marcados[0];
+  const tecnicos = marcados.map(id => ({ tecnico_id: id, responsavel: id === responsavelId }));
+  try {
+    await apiPost('/os/atribuir_tecnicos.php', { os_id: OS_ID, tecnicos });
+    alertaBox.innerHTML = '<div class="alerta alerta-sucesso">Tecnicos atualizados.</div>';
+    setTimeout(() => window.location.reload(), 900);
+  } catch (e) {
+    alertaBox.innerHTML = '<div class="alerta alerta-erro">Erro: ' + e.message + '</div>';
+  }
+});
+</script>
+
+<?php require_once __DIR__ . '/../../includes/footer.php'; ?>
