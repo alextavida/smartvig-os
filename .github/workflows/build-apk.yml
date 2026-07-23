@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    name: Build debug APK
+    name: Build release APK
     runs-on: ubuntu-latest
 
     steps:
@@ -47,16 +47,29 @@ jobs:
         working-directory: app-mobile/android
         run: echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
 
-      - name: Build debug APK
+      - name: Create assets directory
+        run: mkdir -p app-mobile/android/app/src/main/assets
+
+      - name: Bundle JavaScript
+        working-directory: app-mobile
+        run: |
+          npx react-native bundle \
+            --platform android \
+            --dev false \
+            --entry-file index.js \
+            --bundle-output android/app/src/main/assets/index.android.bundle \
+            --assets-dest android/app/src/main/res
+
+      - name: Build release APK
         working-directory: app-mobile/android
-        run: gradle assembleDebug --no-daemon --stacktrace
+        run: gradle assembleRelease --no-daemon --stacktrace
         env:
           ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: SmartVig-OS-v1.0-debug
-          path: app-mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          name: SmartVig-OS-v1.0-release
+          path: app-mobile/android/app/build/outputs/apk/release/app-release.apk
           retention-days: 30
           if-no-files-found: error
