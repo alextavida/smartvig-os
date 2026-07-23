@@ -1,15 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
-    <!-- Allow self-signed certs for local XAMPP development -->
+    <!-- Servidor corporativo com certificado autoassinado XAMPP -->
     <domain-config cleartextTrafficPermitted="false">
-        <domain includeSubdomains="true">10.0.2.2</domain>
+        <domain includeSubdomains="false">186.208.217.187</domain>
         <trust-anchors>
             <certificates src="system" />
             <certificates src="user" />
         </trust-anchors>
-    </domain-config>
-    <!-- Allow cleartext for other LAN IPs during testing -->
-    <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="true">192.168.0.0</domain>
     </domain-config>
 </network-security-config>

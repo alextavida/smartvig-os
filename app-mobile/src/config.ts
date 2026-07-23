@@ -7,7 +7,7 @@
 
 // IP do emulador → localhost da máquina
 // Para dispositivo físico → use o IP LAN da sua máquina
-export const API_BASE_URL = 'https://10.0.2.2:4443/app-tecnicos/api';
+export const API_BASE_URL = 'https://186.208.217.187:4443/app-tecnicos/api';
 
 // Cores da marca SmartVig (espelho do app.css)
 export const CORES = {
