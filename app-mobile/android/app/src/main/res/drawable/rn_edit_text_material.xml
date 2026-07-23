@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:insetLeft="4dp"
+    android:insetRight="4dp"
+    android:insetTop="6dp"
+    android:insetBottom="6dp">
+    <selector>
+        <item android:state_enabled="false">
+            <nine-patch
+                android:src="@drawable/abc_textfield_default_mtrl_alpha"
+                android:tint="?attr/colorControlNormal"
+                android:tintMode="multiply" />
+        </item>
+        <item>
+            <nine-patch
+                android:src="@drawable/abc_textfield_default_mtrl_alpha"
+                android:tint="?attr/colorControlActivated"
+                android:tintMode="multiply" />
+        </item>
+    </selector>
+</inset>
