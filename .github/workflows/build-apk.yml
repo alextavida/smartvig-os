@@ -33,29 +33,25 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
-        with:
-          packages: "platform-tools platforms;android-34 build-tools;34.0.0 ndk;25.1.8937393"
 
-      - name: Generate Gradle Wrapper JAR
+      - name: Install Android SDK components
         run: |
-          wget -q https://services.gradle.org/distributions/gradle-8.3-bin.zip -P /tmp
-          unzip -q /tmp/gradle-8.3-bin.zip -d /opt
-          /opt/gradle-8.3/bin/gradle wrapper \
-            --gradle-version 8.3 \
-            --distribution-type bin \
-            --project-dir app-mobile/android
+          sdkmanager --install "platform-tools" "platforms;android-34" "build-tools;34.0.0" "ndk;25.1.8937393"
 
-      - name: Set SDK path
+      - name: Setup Gradle 8.3
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.3'
+
+      - name: Create local.properties
         working-directory: app-mobile/android
         run: echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
 
-      - name: Grant execute permission to gradlew
-        working-directory: app-mobile/android
-        run: chmod +x gradlew
-
       - name: Build debug APK
         working-directory: app-mobile/android
-        run: ./gradlew assembleDebug --no-daemon --stacktrace
+        run: gradle assembleDebug --no-daemon --stacktrace
+        env:
+          ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
