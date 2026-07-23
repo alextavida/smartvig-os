@@ -22,12 +22,11 @@ android {
 
     buildTypes {
         debug {
-            // Usa o debug.keystore padrao do Android (~/.android/debug.keystore)
+            // debug.keystore padrao do Android gerado automaticamente
         }
         release {
-            minifyEnabled enableProguardInReleaseBuilds
+            minifyEnabled = false
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
-            // Assina com debug key por padrao — configure keystore proprio para producao
             signingConfig signingConfigs.debug
         }
     }
