@@ -51,6 +51,8 @@ class GestaoClickAPI
             CURLOPT_HTTPHEADER => $headers,
             CURLOPT_TIMEOUT => 30,
             CURLOPT_CUSTOMREQUEST => $metodo,
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_SSL_VERIFYHOST => false,
         ];
 
         if ($metodo !== 'GET') {

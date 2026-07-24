@@ -55,6 +55,17 @@ function rotuloStatus(string $s): string
 }
 ?>
 
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+  <h2 style="margin:0;font-size:1.1rem;">Visao geral</h2>
+  <div style="display:flex;gap:8px;align-items:center;">
+    <span id="sync-status" style="font-size:13px;color:#666;"></span>
+    <button id="btn-sync-gc" onclick="sincronizarGC()" class="btn btn-primario btn-sm" style="display:flex;align-items:center;gap:6px;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+      Sincronizar GestaoClick
+    </button>
+  </div>
+</div>
+
 <div class="grid-cards">
   <?php foreach ($statusLista as $s): ?>
     <div class="stat-card <?= $s ?>">
@@ -99,4 +110,35 @@ function rotuloStatus(string $s): string
   <?php endif; ?>
 </div>
 
+<script>
+async function sincronizarGC() {
+  const btn = document.getElementById('btn-sync-gc');
+  const status = document.getElementById('sync-status');
+  btn.disabled = true;
+  btn.textContent = 'Sincronizando...';
+  status.textContent = '';
+  try {
+    const jwt = window.APP_JWT || '';
+    const r = await fetch('/app-tecnicos/api/os/sincronizar.php', {
+      method: 'POST',
+      headers: {'Authorization': 'Bearer ' + jwt, 'Content-Type': 'application/json'},
+    });
+    const d = await r.json();
+    if (d.sucesso) {
+      status.style.color = '#16803c';
+      status.textContent = `✓ ${d.dados.criadas} criadas, ${d.dados.atualizadas} atualizadas`;
+      setTimeout(() => location.reload(), 1200);
+    } else {
+      status.style.color = '#c0392b';
+      status.textContent = '✕ ' + (d.mensagem || 'Erro desconhecido');
+    }
+  } catch (e) {
+    status.style.color = '#c0392b';
+    status.textContent = '✕ Falha de conexao';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '&#x21bb; Sincronizar GestaoClick';
+  }
+}
+</script>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

@@ -63,8 +63,16 @@ try {
             }
 
             $gcSituacaoId = isset($item['situacao_id']) ? (int) $item['situacao_id'] : null;
-            $clienteNome = $item['cliente']['nome'] ?? $item['cliente_nome'] ?? null;
-            $clienteEndereco = $item['cliente']['endereco'] ?? null;
+            $clienteNome = $item['cliente']['nome'] ?? $item['cliente']['razao_social'] ?? $item['cliente_nome'] ?? null;
+            $endCliente = $item['cliente']['enderecos'][0] ?? [];
+            $clienteEndereco = $endCliente
+                ? trim(implode(', ', array_filter([
+                    trim(($endCliente['endereco'] ?? '') . ' ' . ($endCliente['numero'] ?? '')),
+                    $endCliente['bairro'] ?? '',
+                    $endCliente['cidade'] ?? '',
+                    $endCliente['estado'] ?? '',
+                ])))
+                : null;
             $clienteTelefone = $item['cliente']['telefone'] ?? $item['cliente']['celular'] ?? null;
             $codigo = $item['codigo'] ?? $item['numero'] ?? null;
             $dataAgendamento = $item['data'] ?? null;

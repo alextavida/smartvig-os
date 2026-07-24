@@ -50,6 +50,15 @@ jobs:
       - name: Create assets directory
         run: mkdir -p app-mobile/android/app/src/main/assets
 
+      - name: Install pngcrush
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq pngcrush
+
+      - name: Re-encode PNG assets for AAPT2
+        run: |
+          find app-mobile/src/assets -name '*.png' -size 0 -delete 2>/dev/null || true
+          find app-mobile/src/assets -name '*.png' -print0 | \
+            xargs -0 -I{} pngcrush -ow -rem allb -reduce "{}" 2>/dev/null || true
+
       - name: Bundle JavaScript
         working-directory: app-mobile
         run: |

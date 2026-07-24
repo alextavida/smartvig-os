@@ -35,15 +35,19 @@ try {
     if (is_array($clientes)) {
         foreach (array_slice($clientes, 0, 15) as $c) {
             if (!is_array($c)) { continue; }
+            $end = $c['enderecos'][0] ?? [];
+            $endStr = implode(', ', array_filter([
+                trim(($end['endereco'] ?? '') . ' ' . ($end['numero'] ?? '')),
+                $end['bairro'] ?? '',
+                $end['cidade'] ?? '',
+                $end['estado'] ?? '',
+            ]));
             $lista[] = [
                 'id'       => $c['id'] ?? null,
                 'nome'     => $c['nome'] ?? $c['razao_social'] ?? '',
                 'telefone' => $c['telefone'] ?? $c['celular'] ?? '',
                 'email'    => $c['email'] ?? '',
-                'endereco' => trim(
-                    ($c['endereco'] ?? '') . ' ' . ($c['numero'] ?? '') . ', ' .
-                    ($c['bairro'] ?? '') . ', ' . ($c['cidade'] ?? '') . ' ' . ($c['estado'] ?? '')
-                ),
+                'endereco' => trim($endStr),
             ];
         }
     }
