@@ -50,14 +50,19 @@ jobs:
       - name: Create assets directory
         run: mkdir -p app-mobile/android/app/src/main/assets
 
-      - name: Install pngcrush
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq pngcrush
+      - name: Install PNG tools (optipng + ImageMagick)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq optipng imagemagick
 
-      - name: Re-encode PNG assets for AAPT2
+      - name: Fix source PNG assets for AAPT2
         run: |
           find app-mobile/src/assets -name '*.png' -size 0 -delete 2>/dev/null || true
-          find app-mobile/src/assets -name '*.png' -print0 | \
-            xargs -0 -I{} pngcrush -ow -rem allb -reduce "{}" 2>/dev/null || true
+          find app-mobile/src/assets -name '*.png' | while read f; do
+            # Tenta optipng primeiro (remove ICC profiles, interlacing)
+            optipng -o2 -strip all -quiet "$f" 2>/dev/null || {
+              # Fallback: ImageMagick força sRGB sem ICC
+              convert "$f" -strip -type TrueColor -define png:exclude-chunk=iCCP PNG32:"$f" 2>/dev/null || true
+            }
+          done
 
       - name: Bundle JavaScript
         working-directory: app-mobile
@@ -68,6 +73,15 @@ jobs:
             --entry-file index.js \
             --bundle-output android/app/src/main/assets/index.android.bundle \
             --assets-dest android/app/src/main/res
+
+      - name: Fix generated PNG assets for AAPT2
+        # React Native copia os assets após o bundle — reprocessa os gerados também
+        run: |
+          find app-mobile/android/app/src/main/res -name '*.png' | while read f; do
+            optipng -o2 -strip all -quiet "$f" 2>/dev/null || {
+              convert "$f" -strip -type TrueColor -define png:exclude-chunk=iCCP PNG32:"$f" 2>/dev/null || true
+            }
+          done
 
       - name: Build release APK
         working-directory: app-mobile/android

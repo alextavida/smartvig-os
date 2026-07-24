@@ -84,8 +84,20 @@ function inicialTecnico(string $nome): string
   <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
     <span class="badge <?= $os['situacao_local'] ?>"><?= rotuloStatusDet($os['situacao_local']) ?></span>
     <span class="chip-prioridade <?= $os['prioridade'] ?>"><?= ic('flag', 11) ?> <?= ucfirst($os['prioridade']) ?></span>
+    <?php if ($os['codigo']): ?>
+      <span style="font-size:13px;color:#64748b;font-weight:600;"><?= htmlspecialchars($os['codigo']) ?></span>
+    <?php endif; ?>
+    <?php if ($os['gc_os_id']): ?>
+      <span style="font-size:11px;background:#eff6ff;color:#1d4ed8;padding:2px 8px;border-radius:999px;">GC #<?= (int) $os['gc_os_id'] ?></span>
+    <?php endif; ?>
   </div>
   <div class="acoes-tabela no-print">
+    <?php if ($os['gc_os_id']): ?>
+    <button onclick="resyncOS()" class="btn btn-neutro btn-sm" id="btn-resync">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+      Atualizar do GC
+    </button>
+    <?php endif; ?>
     <a href="/app-tecnicos/admin/os/imprimir.php?id=<?= (int) $os['id'] ?>" target="_blank" class="btn btn-neutro btn-sm">
       <?= ic('imprimir', 14) ?> Imprimir OS
     </a>
@@ -217,7 +229,33 @@ function inicialTecnico(string $nome): string
 </div>
 
 <script>
-const OS_ID = <?= (int) $os['id'] ?>;
+const OS_ID  = <?= (int) $os['id'] ?>;
+const GC_OS_ID = <?= (int) ($os['gc_os_id'] ?? 0) ?>;
+
+async function resyncOS() {
+  const btn = document.getElementById('btn-resync');
+  const alertaBox = document.getElementById('alertaDetalhe');
+  btn.disabled = true;
+  btn.textContent = 'Atualizando...';
+  try {
+    const r = await fetch('/app-tecnicos/api/os/sincronizar.php', {
+      method: 'POST',
+      headers: {'Authorization': 'Bearer ' + (window.APP_JWT || ''), 'Content-Type': 'application/json'},
+    });
+    const d = await r.json();
+    if (d.sucesso) {
+      alertaBox.innerHTML = '<div class="alerta alerta-sucesso">OS atualizada do GestaoClick.</div>';
+      setTimeout(() => location.reload(), 900);
+    } else {
+      alertaBox.innerHTML = '<div class="alerta alerta-erro">Falha: ' + (d.erro || 'erro desconhecido') + '</div>';
+    }
+  } catch {
+    alertaBox.innerHTML = '<div class="alerta alerta-erro">Falha de conexao.</div>';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Atualizar do GC';
+  }
+}
 
 document.getElementById('formAtualizarOs').addEventListener('submit', async function (ev) {
   ev.preventDefault();

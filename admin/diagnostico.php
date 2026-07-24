@@ -23,40 +23,42 @@ function testeAuth(string $base, string $token, string $secret, string $metodo, 
     $headers = ['Content-Type: application/json', 'Accept: application/json'];
 
     switch ($metodo) {
+        case 'header_correto':
+            // "Secret Access Token" (3 palavras) → snake_case = secret_access_token
+            $url .= '?pagina=1';
+            $headers[] = 'access_token: ' . $token;
+            $headers[] = 'secret_access_token: ' . $secret;
+            $desc = 'CORRETO: access_token / secret_access_token';
+            break;
         case 'header_underscore':
             $url .= '?pagina=1';
             $headers[] = 'access_token: ' . $token;
             $headers[] = 'secret_access: ' . $secret;
-            $desc = 'Headers com underscore: access_token / secret_access';
+            $desc = 'Antigo: access_token / secret_access';
             break;
         case 'header_hyphen':
             $url .= '?pagina=1';
             $headers[] = 'access-token: ' . $token;
-            $headers[] = 'secret-access: ' . $secret;
-            $desc = 'Headers com hífen: access-token / secret-access';
+            $headers[] = 'secret-access-token: ' . $secret;
+            $desc = 'Hífen: access-token / secret-access-token';
             break;
         case 'query_param':
-            $url .= '?access_token=' . urlencode($token) . '&secret_access=' . urlencode($secret) . '&pagina=1';
-            $desc = 'Query params: ?access_token=...&secret_access=...';
+            $url .= '?access_token=' . urlencode($token) . '&secret_access_token=' . urlencode($secret) . '&pagina=1';
+            $desc = 'Query params: ?access_token=...&secret_access_token=...';
             break;
-        case 'mixed':
-            $url .= '?secret_access=' . urlencode($secret) . '&pagina=1';
-            $headers[] = 'access_token: ' . $token;
-            $desc = 'Misto: access_token no header + secret_access na URL';
-            break;
-        case 'mixed2':
-            $url .= '?access_token=' . urlencode($token) . '&pagina=1';
-            $headers[] = 'secret_access: ' . $secret;
-            $desc = 'Misto: access_token na URL + secret_access no header';
-            break;
-        case 'both_headers':
-            $url .= '?pagina=1';
-            $headers[] = 'access_token: ' . $token;
-            $headers[] = 'secret_access: ' . $secret;
-            $headers[] = 'access-token: ' . $token;
-            $headers[] = 'secret-access: ' . $secret;
-            $desc = 'Ambos: underscore + hífen (simultâneo)';
-            break;
+        case 'hex_check':
+            // Não faz requisição HTTP — apenas verifica encoding dos tokens
+            return [
+                'desc'         => 'Verificação hex dos tokens (sem requisição HTTP)',
+                'url'          => '(sem requisição)',
+                'tempo'        => 0,
+                'codigo'       => 0,
+                'ok'           => false,
+                'erroC'        => '',
+                'corpo'        => 'access_token hex: ' . bin2hex($token) . "\nsecret_access hex: " . bin2hex($secret),
+                'json'         => null,
+                'mensagemErro' => '',
+            ];
         default:
             $desc = 'Desconhecido';
     }
@@ -90,7 +92,7 @@ function testeAuth(string $base, string $token, string $secret, string $metodo, 
 
 $resultados = [];
 if (!empty($gcToken) && !empty($gcSecret)) {
-    foreach (['header_underscore', 'header_hyphen', 'query_param', 'mixed', 'mixed2', 'both_headers'] as $m) {
+    foreach (['header_correto', 'header_underscore', 'header_hyphen', 'query_param', 'hex_check'] as $m) {
         $resultados[$m] = testeAuth($gcBase, $gcToken, $gcSecret, $m);
         // Para quando encontrar o metodo que funciona (evitar rate limit)
         if ($resultados[$m]['ok']) { break; }
@@ -152,7 +154,9 @@ pre { background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:1
     <span class="badge bMs"><?= $r['tempo'] ?>ms</span>
     <span style="font-size:13px; font-weight:600;"><?= htmlspecialchars($r['desc']) ?></span>
   </div>
-  <?php if ($r['erroC']): ?>
+  <?php if ($chave === 'hex_check'): ?>
+    <pre style="color:#1e40af;"><?= htmlspecialchars($r['corpo']) ?></pre>
+  <?php elseif ($r['erroC']): ?>
     <div style="color:#dc2626; font-size:13px;">Erro cURL: <?= htmlspecialchars($r['erroC']) ?></div>
   <?php elseif (!$r['ok']): ?>
     <div style="font-size:13px; color:#dc2626;">Motivo: <?= htmlspecialchars($r['mensagemErro']) ?></div>
@@ -174,6 +178,38 @@ pre { background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:1
     <li>Se os tokens diferem, atualize no phpMyAdmin → tabela <code>configuracoes</code></li>
     <li>Verifique se o plano GestãoClick inclui acesso à API (planos básicos podem não ter)</li>
   </ol>
+</div>
+<?php endif; ?>
+
+<?php if ($metodoOk):
+    // Pega estrutura real de 1 OS para depuracao
+    try {
+        $gcInst = new GestaoClickAPI();
+        $osResp = $gcInst->listarOS(1);
+        $sampleOs = $osResp['data'][0] ?? $osResp['dados'][0] ?? null;
+        $osMeta = $osResp['meta'] ?? null;
+    } catch (GestaoClickApiException $e) {
+        $sampleOs = null;
+        $osMeta = null;
+    }
+?>
+<div class="dc" style="border-left:4px solid #1d4ed8;">
+  <strong style="font-size:14px; color:#1d4ed8;">Estrutura real de 1 OS do GestãoClick (para depuração do sync)</strong>
+  <?php if ($osMeta): ?>
+    <div style="font-size:12px;color:#64748b;margin-top:6px;">
+      Total OS: <?= (int)($osMeta['total_registros'] ?? 0) ?> |
+      Páginas: <?= (int)($osMeta['total_paginas'] ?? 0) ?> |
+      Por página: <?= (int)($osMeta['limite_por_pagina'] ?? 0) ?>
+    </div>
+  <?php endif; ?>
+  <?php if ($sampleOs): ?>
+    <div style="font-size:12px;color:#64748b;margin-top:4px;">
+      <strong>Chaves disponíveis:</strong> <?= htmlspecialchars(implode(', ', array_keys($sampleOs))) ?>
+    </div>
+    <pre><?= htmlspecialchars(json_encode($sampleOs, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)) ?></pre>
+  <?php else: ?>
+    <div style="color:#c0392b;font-size:13px;margin-top:8px;">Nenhuma OS encontrada no GestãoClick.</div>
+  <?php endif; ?>
 </div>
 <?php endif; ?>
 

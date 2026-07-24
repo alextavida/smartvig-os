@@ -35,11 +35,12 @@ try {
     if (is_array($clientes)) {
         foreach (array_slice($clientes, 0, 15) as $c) {
             if (!is_array($c)) { continue; }
-            $end = $c['enderecos'][0] ?? [];
+            // GC: enderecos[0]['endereco'] é o objeto de endereço; campos: logradouro, numero, bairro, nome_cidade, estado
+            $end = $c['enderecos'][0]['endereco'] ?? [];
             $endStr = implode(', ', array_filter([
-                trim(($end['endereco'] ?? '') . ' ' . ($end['numero'] ?? '')),
+                trim(($end['logradouro'] ?? '') . ' ' . ($end['numero'] ?? '')),
                 $end['bairro'] ?? '',
-                $end['cidade'] ?? '',
+                $end['nome_cidade'] ?? '',
                 $end['estado'] ?? '',
             ]));
             $lista[] = [

@@ -55,9 +55,9 @@ unset($midia);
 $os['produtos'] = $os['produtos_json'] ? json_decode($os['produtos_json'], true) : [];
 unset($os['produtos_json'], $os['midias_json']);
 
-responderSucesso([
-    'os' => $os,
+// Retorna tudo flat: OSDetalhe = campos da OS + tecnicos + historico + midias
+responderSucesso(array_merge($os, [
     'tecnicos' => $tecnicos,
     'historico' => $historico,
-    'midias' => $midias,
-]);
+    'midias'   => $midias,
+]));

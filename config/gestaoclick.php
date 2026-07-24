@@ -39,13 +39,11 @@ class GestaoClickAPI
 
         $ch = curl_init($url);
 
-        // Envia tokens como headers (underscore e hífen simultaneamente) para
-        // contornar diferentes comportamentos de proxy/nginx entre XAMPP e GC.
+        // GC usa 'access_token' e 'secret_access_token' como nomes de header.
+        // O campo se chama "Secret Access Token" (3 palavras) → snake_case = secret_access_token.
         $headers = [
-            'access_token: '  . $this->accessToken,
-            'secret_access: ' . $this->secretAccess,
-            'access-token: '  . $this->accessToken,
-            'secret-access: ' . $this->secretAccess,
+            'access_token: '        . $this->accessToken,
+            'secret_access_token: ' . $this->secretAccess,
             'Content-Type: application/json',
             'Accept: application/json',
         ];

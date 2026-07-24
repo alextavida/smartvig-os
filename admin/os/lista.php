@@ -65,7 +65,9 @@ $stmtTotal = $pdo->prepare("SELECT COUNT(*) FROM ordens_servico os {$whereSql}")
 $stmtTotal->execute($parametros);
 $total = (int) $stmtTotal->fetchColumn();
 
-$sql = "SELECT os.id, os.cliente_nome, os.situacao_local, os.prioridade, os.data_agendamento, resp.nome AS tecnico_nome
+$sql = "SELECT os.id, os.gc_os_id, os.codigo, os.cliente_nome, os.cliente_telefone,
+               os.situacao_local, os.prioridade, os.data_agendamento, os.sincronizado_gc,
+               resp.nome AS tecnico_nome
         FROM ordens_servico os
         LEFT JOIN usuarios resp ON resp.id = os.tecnico_id
         {$whereSql}
@@ -147,11 +149,18 @@ function montarQuery(array $sobrescrever = []): string
     </div>
   </form>
 
-  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
     <span style="font-size:13px; color:var(--cinza-500);"><?= $total ?> OS encontrada<?= $total !== 1 ? 's' : '' ?></span>
-    <a href="<?= montarQuery(['exportar' => 'csv']) ?>" class="btn btn-neutro btn-sm no-print">
-      <?= ic('exportar', 14) ?> Exportar CSV
-    </a>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <span id="sync-status-lista" style="font-size:12px;color:#666;"></span>
+      <button onclick="sincronizarGCLista()" class="btn btn-primario btn-sm no-print" style="display:flex;align-items:center;gap:5px;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        Sincronizar GC
+      </button>
+      <a href="<?= montarQuery(['exportar' => 'csv']) ?>" class="btn btn-neutro btn-sm no-print">
+        <?= ic('exportar', 14) ?> CSV
+      </a>
+    </div>
   </div>
 
   <?php if (empty($osLista)): ?>
@@ -160,8 +169,9 @@ function montarQuery(array $sobrescrever = []): string
   <table>
     <thead>
       <tr>
-        <th>#</th>
+        <th>Codigo</th>
         <th>Cliente</th>
+        <th>Telefone</th>
         <th>Tecnico</th>
         <th>Prioridade</th>
         <th>Agendamento</th>
@@ -172,9 +182,18 @@ function montarQuery(array $sobrescrever = []): string
     <tbody>
       <?php foreach ($osLista as $os): ?>
         <tr>
-          <td><strong>#<?= (int) $os['id'] ?></strong></td>
+          <td>
+            <strong><?= $os['codigo'] ? htmlspecialchars($os['codigo']) : '#' . (int) $os['id'] ?></strong>
+            <?php if ($os['gc_os_id'] && !$os['codigo']): ?>
+              <div style="font-size:10px;color:#94a3b8;">GC:<?= (int) $os['gc_os_id'] ?></div>
+            <?php endif; ?>
+            <?php if (!$os['sincronizado_gc']): ?>
+              <span title="Criado localmente" style="font-size:10px;color:#f59e0b;">● local</span>
+            <?php endif; ?>
+          </td>
           <td><?= htmlspecialchars($os['cliente_nome'] ?? '-') ?></td>
-          <td><?= htmlspecialchars($os['tecnico_nome'] ?? '-') ?></td>
+          <td style="font-size:12px;color:#475569;"><?= htmlspecialchars($os['cliente_telefone'] ?? '-') ?></td>
+          <td><?= htmlspecialchars($os['tecnico_nome'] ?? 'Sem atribuição') ?></td>
           <td>
             <span class="chip-prioridade <?= $os['prioridade'] ?>">
               <?= ic('flag', 10) ?>
@@ -194,14 +213,67 @@ function montarQuery(array $sobrescrever = []): string
     </tbody>
   </table>
 
-  <?php if ($totalPaginas > 1): ?>
+  <?php if ($totalPaginas > 1):
+    // Janela de paginação: sempre mostra 1, última e até 3 em torno da atual
+    $exibir = array_unique(array_filter(array_merge(
+      [1, 2],
+      range(max(1, $pagina - 2), min($totalPaginas, $pagina + 2)),
+      [$totalPaginas - 1, $totalPaginas]
+    )));
+    sort($exibir);
+  ?>
   <div class="paginacao">
-    <?php for ($p = 1; $p <= $totalPaginas; $p++): ?>
+    <?php if ($pagina > 1): ?>
+      <a href="<?= montarQuery(['pagina' => $pagina - 1]) ?>">&laquo;</a>
+    <?php endif; ?>
+    <?php $anterior = 0; foreach ($exibir as $p):
+      if ($anterior && $p - $anterior > 1): ?>
+        <span style="padding:0 4px;color:#94a3b8;">…</span>
+      <?php endif; ?>
       <a href="<?= montarQuery(['pagina' => $p]) ?>" class="<?= $p === $pagina ? 'ativo' : '' ?>"><?= $p ?></a>
-    <?php endfor; ?>
+    <?php $anterior = $p; endforeach; ?>
+    <?php if ($pagina < $totalPaginas): ?>
+      <a href="<?= montarQuery(['pagina' => $pagina + 1]) ?>">&raquo;</a>
+    <?php endif; ?>
   </div>
   <?php endif; ?>
   <?php endif; ?>
 </div>
 
+<script>
+async function sincronizarGCLista() {
+  const el = document.getElementById('sync-status-lista');
+  el.textContent = 'Sincronizando...';
+  el.style.color = '#64748b';
+  try {
+    const r = await fetch('/app-tecnicos/api/os/sincronizar.php', {
+      method: 'POST',
+      headers: {'Authorization': 'Bearer ' + (window.APP_JWT || ''), 'Content-Type': 'application/json'},
+    });
+    const d = await r.json();
+    if (d.sucesso) {
+      el.style.color = '#16803c';
+      el.textContent = `✓ ${d.dados.criadas} criadas, ${d.dados.atualizadas} atualizadas`;
+      if (d.dados.criadas > 0) { setTimeout(() => location.reload(), 900); }
+    } else {
+      el.style.color = '#c0392b';
+      el.textContent = '✕ ' + (d.erro || 'Erro');
+    }
+  } catch {
+    el.style.color = '#c0392b';
+    el.textContent = '✕ Falha de conexao';
+  }
+}
+// Auto-sync silencioso ao abrir a lista
+window.addEventListener('DOMContentLoaded', async () => {
+  try {
+    const r = await fetch('/app-tecnicos/api/os/sincronizar.php', {
+      method: 'POST',
+      headers: {'Authorization': 'Bearer ' + (window.APP_JWT || ''), 'Content-Type': 'application/json'},
+    });
+    const d = await r.json();
+    if (d.sucesso && d.dados.criadas > 0) { location.reload(); }
+  } catch {}
+});
+</script>
 <?php require_once __DIR__ . '/../../includes/footer.php'; ?>
