@@ -67,16 +67,17 @@ class GestaoClickAPI
         curl_close($ch);
 
         if ($respostaBruta === false) {
-            throw new GestaoClickApiException("Falha de conexao com o GestaoClick: {$erroCurl}");
+            throw new GestaoClickApiException("Falha de conexao cURL: {$erroCurl}");
         }
 
-        $resposta = json_decode($respostaBruta, true);
+        $resposta = json_decode((string) $respostaBruta, true);
 
         if ($codigoHttp >= 400) {
-            $mensagem = is_array($resposta) && isset($resposta['message'])
-                ? $resposta['message']
-                : "Erro HTTP {$codigoHttp} na API do GestaoClick";
-            throw new GestaoClickApiException($mensagem);
+            // Inclui o corpo bruto no erro para facilitar diagnóstico
+            $detalhe = is_array($resposta)
+                ? ($resposta['message'] ?? $resposta['error'] ?? $resposta['mensagem'] ?? json_encode($resposta, JSON_UNESCAPED_UNICODE))
+                : (string) $respostaBruta;
+            throw new GestaoClickApiException("HTTP {$codigoHttp}: {$detalhe}");
         }
 
         return is_array($resposta) ? $resposta : [];
@@ -102,22 +103,22 @@ class GestaoClickAPI
      */
     public function listarOS(int $pagina = 1): array
     {
-        return $this->get('ordens_de_servicos/', ['pagina' => $pagina]);
+        return $this->get('ordens_servicos/', ['pagina' => $pagina]);
     }
 
     public function visualizarOS(int $gcOsId): array
     {
-        return $this->get("ordens_de_servicos/{$gcOsId}/");
+        return $this->get("ordens_servicos/{$gcOsId}/");
     }
 
     public function criarOS(array $dados): array
     {
-        return $this->post('ordens_de_servicos/', $dados);
+        return $this->post('ordens_servicos/', $dados);
     }
 
     public function atualizarOS(int $gcOsId, array $dados): array
     {
-        return $this->put("ordens_de_servicos/{$gcOsId}/", $dados);
+        return $this->put("ordens_servicos/{$gcOsId}/", $dados);
     }
 
     public function listarSituacoes(): array
