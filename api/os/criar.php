@@ -61,12 +61,16 @@ try {
         }
     }
 
+    $portalToken = bin2hex(random_bytes(16));
+
     $stmt = $pdo->prepare(
         'INSERT INTO ordens_servico
             (gc_os_id, gc_cliente_id, codigo, cliente_nome, cliente_endereco, cliente_telefone,
-             tecnico_id, situacao_local, prioridade, data_agendamento, observacoes, sincronizado_gc)
+             tecnico_id, situacao_local, prioridade, data_agendamento, data_prazo, observacoes,
+             sincronizado_gc, portal_token)
          VALUES (0, :gc_cliente_id, :codigo, :cliente_nome, :cliente_endereco, :cliente_telefone,
-                 :tecnico_id, "aberto", :prioridade, :data_agendamento, :observacoes, 0)'
+                 :tecnico_id, "aberto", :prioridade, :data_agendamento, :data_prazo, :observacoes,
+                 0, :portal_token)'
     );
     $stmt->execute([
         'gc_cliente_id' => $dados['gc_cliente_id'] ?? null,
@@ -77,7 +81,9 @@ try {
         'tecnico_id' => $tecnicoResponsavelId,
         'prioridade' => $prioridade,
         'data_agendamento' => $dados['data_agendamento'],
+        'data_prazo' => $dados['data_prazo'] ?? null,
         'observacoes' => $dados['observacoes'] ?? null,
+        'portal_token' => $portalToken,
     ]);
 
     $osId = (int) $pdo->lastInsertId();

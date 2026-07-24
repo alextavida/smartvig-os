@@ -29,7 +29,7 @@ $osId = (int) $dados['os_id'];
 $pdo = obterConexao();
 $os = buscarOsOuFalhar($pdo, $osId, $payload);
 
-$camposPermitidos = ['cliente_nome', 'cliente_endereco', 'cliente_telefone', 'data_agendamento', 'observacoes', 'situacao_local', 'prioridade'];
+$camposPermitidos = ['cliente_nome', 'cliente_endereco', 'cliente_telefone', 'data_agendamento', 'data_prazo', 'observacoes', 'situacao_local', 'prioridade'];
 $situacoesValidas = ['aberto', 'em_andamento', 'pausado', 'reagendado', 'concluido', 'cancelado'];
 $prioridadesValidas = ['baixo', 'intermediario', 'urgente'];
 

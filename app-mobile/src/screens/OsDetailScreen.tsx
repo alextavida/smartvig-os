@@ -31,6 +31,9 @@ import {OSDetalhe, TecnicoLista, ProdutoGC, GCEquipamento} from '../types';
 import {StatusBadge} from '../components/StatusBadge';
 import {PriorityBadge} from '../components/PriorityBadge';
 import {SignatureModal} from '../components/SignatureModal';
+import {PhotoAnnotationModal} from '../components/PhotoAnnotationModal';
+import {useVoiceRecognition} from '../hooks/useVoiceRecognition';
+import {useOfflineQueue} from '../hooks/useOfflineQueue';
 import {useAuth} from '../hooks/useAuth';
 import {CORES, API_BASE_URL} from '../config';
 import {RootStackParamList} from '../navigation';
@@ -92,10 +95,18 @@ export function OsDetailScreen({route, navigation}: Props) {
   const [isOnline, setIsOnline] = useState(true);
   // Assinatura digital
   const [modalAssinatura, setModalAssinatura] = useState(false);
+  // Foto com anotações
+  const [fotoBase64Para, setFotoBase64Para]   = useState('');
+  const [modalAnotacao, setModalAnotacao]     = useState(false);
 
   const gpsTimer  = useRef<ReturnType<typeof setInterval> | null>(null);
   const timerRef  = useRef<ReturnType<typeof setInterval> | null>(null);
   const timerKey  = `timer_inicio_os_${osId}`;
+
+  // Voice recognition para laudo
+  const {ouvindo, textoReconhecido, erro: erroVoz, iniciarDitado, pararDitado, limpar: limparVoz} = useVoiceRecognition();
+  // Fila offline
+  const {pendentes: acoesOffline, enfileirar} = useOfflineQueue();
 
   const carregar = useCallback(async () => {
     try {
@@ -168,6 +179,14 @@ export function OsDetailScreen({route, navigation}: Props) {
     return () => unsub();
   }, []);
 
+  // Captura texto de voz e adiciona à descrição
+  useEffect(() => {
+    if (textoReconhecido) {
+      setDescricao(prev => prev ? `${prev} ${textoReconhecido}` : textoReconhecido);
+      limparVoz();
+    }
+  }, [textoReconhecido, limparVoz]);
+
   // Busca produtos GC com debounce
   useEffect(() => {
     if (!modalProduto || prodBusca.length < 2) {setProdSugestoes([]); return;}
@@ -235,12 +254,21 @@ export function OsDetailScreen({route, navigation}: Props) {
     Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${destino}`);
   }
 
-  async function enviarMidia(fonte: 'camera' | 'galeria') {
+  async function enviarMidia(fonte: 'camera' | 'galeria', comAnotacao = false) {
     const fn = fonte === 'camera' ? launchCamera : launchImageLibrary;
-    fn({mediaType: 'mixed', quality: 0.8, includeBase64: false}, async response => {
+    const incluiBase64 = comAnotacao || fonte === 'camera';
+    fn({mediaType: 'mixed', quality: 0.8, includeBase64: incluiBase64}, async response => {
       if (response.didCancel || !response.assets?.[0]) {return;}
       const asset = response.assets[0];
       const tipo = asset.type?.startsWith('video') ? 'video' : 'foto';
+
+      // Foto com anotações: abre o editor antes de enviar
+      if (comAnotacao && tipo === 'foto' && asset.base64) {
+        setFotoBase64Para(`data:image/jpeg;base64,${asset.base64}`);
+        setModalAnotacao(true);
+        return;
+      }
+
       setSalvando(true);
       try {
         await uploadMidia(osId, tipo, {
@@ -261,6 +289,7 @@ export function OsDetailScreen({route, navigation}: Props) {
   function escolherMidia() {
     Alert.alert('Enviar mídia', 'Como deseja adicionar?', [
       {text: 'Câmera', onPress: () => enviarMidia('camera')},
+      {text: '📸 Câmera + Anotação', onPress: () => enviarMidia('camera', true)},
       {text: 'Galeria', onPress: () => enviarMidia('galeria')},
       {text: 'Cancelar', style: 'cancel'},
     ]);
@@ -417,11 +446,18 @@ export function OsDetailScreen({route, navigation}: Props) {
               <TouchableOpacity
                 style={[estilos.botaoAcao, estilos.botaoPrimario]}
                 disabled={salvando}
-                onPress={() => acao(async () => {
+                onPress={async () => {
+                  if (!isOnline) {
+                    await enfileirar('iniciar', osId, {});
+                    mostrarSucesso('Sem conexão — ação salva para sincronizar.');
+                    return;
+                  }
+                  acao(async () => {
                     await iniciarOs(osId);
                     const inicio = Date.now();
                     await AsyncStorage.setItem(timerKey, String(inicio));
-                  }, 'OS iniciada!')}>
+                  }, 'OS iniciada!');
+                }}>
                 <Text style={estilos.botaoAcaoText}>▶ Iniciar</Text>
               </TouchableOpacity>
             )}
@@ -596,12 +632,24 @@ export function OsDetailScreen({route, navigation}: Props) {
             placeholder="Descreva o serviço, observações..."
             placeholderTextColor={CORES.cinza300}
           />
-          <TouchableOpacity
-            style={[estilos.botaoPequeno, {backgroundColor: CORES.azul100}]}
-            disabled={salvando}
-            onPress={() => acao(() => salvarDescricao(osId, descricao), 'Descrição salva.')}>
-            <Text style={{color: CORES.azul700, fontWeight: '600'}}>Salvar descrição</Text>
-          </TouchableOpacity>
+          {erroVoz ? (
+            <Text style={{color: CORES.vermelho, fontSize: 12, marginTop: 4}}>⚠ {erroVoz}</Text>
+          ) : null}
+          <View style={{flexDirection: 'row', gap: 8, marginTop: 10}}>
+            <TouchableOpacity
+              style={[estilos.botaoPequeno, {backgroundColor: CORES.azul100}]}
+              disabled={salvando}
+              onPress={() => acao(() => salvarDescricao(osId, descricao), 'Descrição salva.')}>
+              <Text style={{color: CORES.azul700, fontWeight: '600'}}>Salvar descrição</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[estilos.botaoPequeno, {backgroundColor: ouvindo ? '#fee2e2' : CORES.cinza100}]}
+              onPress={() => ouvindo ? pararDitado() : iniciarDitado()}>
+              <Text style={{color: ouvindo ? CORES.vermelho : CORES.cinza700, fontWeight: '600'}}>
+                {ouvindo ? '🛑 Parar' : '🎙 Ditar'}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Produtos */}
@@ -748,8 +796,15 @@ export function OsDetailScreen({route, navigation}: Props) {
               <TouchableOpacity
                 style={[estilos.botaoModal, {backgroundColor: CORES.azul700}]}
                 disabled={salvando}
-                onPress={() => {
+                onPress={async () => {
                   if (!motivoPausa.trim()) {Alert.alert('Informe o motivo da pausa.'); return;}
+                  if (!isOnline) {
+                    await pararTimer();
+                    await enfileirar('pausar', osId, {motivo: motivoPausa});
+                    setModalPausar(false); setMotivoPausa('');
+                    mostrarSucesso('Sem conexão — pausa salva para sincronizar.');
+                    return;
+                  }
                   acao(async () => {
                     await pararTimer();
                     await pausarOs(osId, motivoPausa);
@@ -843,8 +898,15 @@ export function OsDetailScreen({route, navigation}: Props) {
               <TouchableOpacity
                 style={[estilos.botaoModal, {backgroundColor: CORES.verde}]}
                 disabled={salvando}
-                onPress={() => {
+                onPress={async () => {
                   if (!laudoFinal.trim()) {Alert.alert('Informe o laudo final.'); return;}
+                  if (!isOnline) {
+                    await pararTimer();
+                    await enfileirar('encerrar', osId, {laudo: laudoFinal});
+                    setModalEncerrar(false); setLaudoFinal('');
+                    mostrarSucesso('Sem conexão — encerramento salvo para sincronizar.');
+                    return;
+                  }
                   acao(async () => {
                     await pararTimer();
                     await encerrarOs(osId, laudoFinal);
@@ -1033,6 +1095,27 @@ export function OsDetailScreen({route, navigation}: Props) {
           </View>
         </View>
       </Modal>
+
+      {/* Modal Foto com Anotações */}
+      <PhotoAnnotationModal
+        visible={modalAnotacao}
+        imagemBase64={fotoBase64Para}
+        onCancelar={() => { setModalAnotacao(false); setFotoBase64Para(''); }}
+        onConfirm={async base64Anotada => {
+          setModalAnotacao(false);
+          setFotoBase64Para('');
+          setSalvando(true);
+          try {
+            await uploadBase64Midia(osId, 'foto', base64Anotada, `foto_anotada_${Date.now()}.jpg`);
+            mostrarSucesso('Foto com anotação enviada!');
+            await carregar();
+          } catch (e: any) {
+            mostrarErro(e.message ?? 'Erro ao enviar foto com anotação.');
+          } finally {
+            setSalvando(false);
+          }
+        }}
+      />
 
       {/* Modal Assinatura Digital */}
       <SignatureModal

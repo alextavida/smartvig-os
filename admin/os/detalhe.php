@@ -98,6 +98,12 @@ function inicialTecnico(string $nome): string
       Atualizar do GC
     </button>
     <?php endif; ?>
+    <?php if (!empty($os['portal_token'])): ?>
+    <a href="https://wa.me/?text=<?= urlencode('Olá! Acompanhe o status da sua OS em tempo real: ' . (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'] . '/app-tecnicos/portal/os.php?token=' . $os['portal_token']) ?>"
+       target="_blank" class="btn btn-neutro btn-sm" style="background:#e6f4ea;color:#1e8e5a;">
+      💬 Enviar portal ao cliente
+    </a>
+    <?php endif; ?>
     <a href="/app-tecnicos/admin/os/imprimir.php?id=<?= (int) $os['id'] ?>" target="_blank" class="btn btn-neutro btn-sm">
       <?= ic('imprimir', 14) ?> Imprimir OS
     </a>
@@ -140,6 +146,10 @@ function inicialTecnico(string $nome): string
       <div class="campo">
         <label>Data de agendamento</label>
         <input type="date" name="data_agendamento" value="<?= htmlspecialchars($os['data_agendamento'] ?? '') ?>">
+      </div>
+      <div class="campo">
+        <label>Prazo (SLA)</label>
+        <input type="date" name="data_prazo" value="<?= htmlspecialchars($os['data_prazo'] ?? '') ?>">
       </div>
       <div class="campo">
         <label>Prioridade</label>

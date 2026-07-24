@@ -66,7 +66,7 @@ $stmtTotal->execute($parametros);
 $total = (int) $stmtTotal->fetchColumn();
 
 $sql = "SELECT os.id, os.gc_os_id, os.codigo, os.cliente_nome, os.cliente_telefone,
-               os.situacao_local, os.prioridade, os.data_agendamento, os.sincronizado_gc,
+               os.situacao_local, os.prioridade, os.data_agendamento, os.data_prazo, os.sincronizado_gc,
                resp.nome AS tecnico_nome
         FROM ordens_servico os
         LEFT JOIN usuarios resp ON resp.id = os.tecnico_id
@@ -175,6 +175,7 @@ function montarQuery(array $sobrescrever = []): string
         <th>Tecnico</th>
         <th>Prioridade</th>
         <th>Agendamento</th>
+        <th>Prazo/SLA</th>
         <th>Status</th>
         <th></th>
       </tr>
@@ -201,6 +202,25 @@ function montarQuery(array $sobrescrever = []): string
             </span>
           </td>
           <td><?= $os['data_agendamento'] ? htmlspecialchars(date('d/m/Y', strtotime($os['data_agendamento']))) : '-' ?></td>
+          <td>
+            <?php
+              $dp = $os['data_prazo'] ?? null;
+              if ($dp) {
+                $hoje   = new DateTimeImmutable('today');
+                $prazo  = new DateTimeImmutable($dp);
+                $diff   = (int) $hoje->diff($prazo)->format('%r%a');
+                if ($diff < 0) {
+                  echo '<span style="background:#fee2e2;color:#b91c1c;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;">🔴 Vencido</span>';
+                } elseif ($diff <= 2) {
+                  echo '<span style="background:#fef9c3;color:#92400e;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;">🟡 Vencendo</span>';
+                } else {
+                  echo '<span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;">🟢 ' . htmlspecialchars(date('d/m', strtotime($dp))) . '</span>';
+                }
+              } else {
+                echo '<span style="color:#94a3b8;font-size:12px;">—</span>';
+              }
+            ?>
+          </td>
           <td><span class="badge <?= $os['situacao_local'] ?>"><?= rotuloStatusLista($os['situacao_local']) ?></span></td>
           <td>
             <div class="acoes-tabela">

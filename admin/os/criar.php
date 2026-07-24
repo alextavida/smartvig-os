@@ -52,11 +52,15 @@ $tecnicos = $pdo->query("SELECT id, nome, email FROM usuarios WHERE perfil = 'te
       <input type="text" id="cliente_endereco" name="cliente_endereco" placeholder="Rua, numero, bairro, cidade">
     </div>
 
-    <!-- Linha 2: Data + Prioridade -->
+    <!-- Linha 2: Data + Prazo + Prioridade -->
     <div class="linha-form">
       <div class="campo">
         <label for="data_agendamento">Data de agendamento *</label>
         <input type="date" id="data_agendamento" name="data_agendamento" required>
+      </div>
+      <div class="campo">
+        <label for="data_prazo">Prazo de conclusao (SLA)</label>
+        <input type="date" id="data_prazo" name="data_prazo">
       </div>
       <div class="campo">
         <label for="prioridade">Prioridade</label>
@@ -246,6 +250,7 @@ document.getElementById('formCriarOs').addEventListener('submit', async function
     prioridade: document.getElementById('prioridade').value,
     observacoes: document.getElementById('observacoes').value,
     gc_cliente_id: document.getElementById('gc_cliente_id').value || null,
+    data_prazo: document.getElementById('data_prazo').value || null,
     tecnicos,
   };
 
