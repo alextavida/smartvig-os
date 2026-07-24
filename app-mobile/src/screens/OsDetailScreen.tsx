@@ -23,6 +23,7 @@ import {uploadMidia} from '../api/midias';
 import {OSDetalhe} from '../types';
 import {StatusBadge} from '../components/StatusBadge';
 import {PriorityBadge} from '../components/PriorityBadge';
+import {useAuth} from '../hooks/useAuth';
 import {CORES, API_BASE_URL} from '../config';
 import {RootStackParamList} from '../navigation';
 
@@ -38,6 +39,8 @@ const ROTULOS_ACAO: Record<string, string> = {
 
 export function OsDetailScreen({route, navigation}: Props) {
   const {osId} = route.params;
+  const {usuario} = useAuth();
+  const isGestor = usuario?.perfil === 'gestor';
   const [os, setOs] = useState<OSDetalhe | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
@@ -81,9 +84,9 @@ export function OsDetailScreen({route, navigation}: Props) {
     carregar();
   }, [carregar]);
 
-  // GPS automático quando em andamento
+  // GPS automático quando em andamento (apenas para técnicos em campo)
   useEffect(() => {
-    if (os?.situacao_local !== 'em_andamento') {
+    if (isGestor || os?.situacao_local !== 'em_andamento') {
       if (gpsTimer.current) {clearInterval(gpsTimer.current);}
       return;
     }

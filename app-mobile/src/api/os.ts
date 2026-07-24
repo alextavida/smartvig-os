@@ -4,21 +4,23 @@ import {OS, OSDetalhe} from '../types';
 interface ListarOsParams {
   status?: string;
   pagina?: number;
+  tecnico_id?: number;
 }
 
 interface ListarOsResposta {
-  os: OS[];
-  paginacao: {pagina: number; total: number; paginas: number};
+  ordens_servico: OS[];
+  paginacao: {pagina: number; total: number; total_paginas: number};
 }
 
 export async function listarOs(params: ListarOsParams = {}): Promise<OS[]> {
   const qs = new URLSearchParams();
   if (params.status) {qs.set('status', params.status);}
   if (params.pagina) {qs.set('pagina', String(params.pagina));}
+  if (params.tecnico_id) {qs.set('tecnico_id', String(params.tecnico_id));}
   const resultado = await apiGet<ListarOsResposta>(
     `/os/listar.php?${qs.toString()}`,
   );
-  return resultado.os ?? [];
+  return resultado.ordens_servico ?? [];
 }
 
 export async function visualizarOs(id: number): Promise<OSDetalhe> {

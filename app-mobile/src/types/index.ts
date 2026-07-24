@@ -10,19 +10,23 @@ export interface Usuario {
 export interface OS {
   id: number;
   gc_os_id: number;
+  codigo?: string;
   cliente_nome: string;
   cliente_endereco: string;
   cliente_telefone: string;
   situacao_local: string;
-  prioridade: 'baixo' | 'intermediario' | 'urgente';
+  prioridade?: 'baixo' | 'intermediario' | 'urgente';
   data_agendamento: string | null;
   data_conclusao: string | null;
   observacoes: string | null;
   motivo_pausa: string | null;
   produtos_json: string | null;
+  tecnico_id?: number | null;
+  tecnico_responsavel_nome?: string | null;
   latitude_atual: string | null;
   longitude_atual: string | null;
   criado_em: string;
+  atualizado_em?: string;
 }
 
 export interface OSTecnico {

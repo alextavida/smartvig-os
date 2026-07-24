@@ -30,13 +30,15 @@ const ABAS = [
 ];
 
 export function HomeScreen({navigation}: Props) {
-  const {usuario, fazerLogout} = useAuth();
+  const {usuario} = useAuth();
   const {naoLidas} = useNotificacoes(true);
   const [abaAtiva, setAbaAtiva] = useState('');
   const [osList, setOsList] = useState<OS[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [atualizando, setAtualizando] = useState(false);
   const [erro, setErro] = useState('');
+
+  const isGestor = usuario?.perfil === 'gestor';
 
   const carregar = useCallback(async (status: string) => {
     setErro('');
@@ -70,9 +72,20 @@ export function HomeScreen({navigation}: Props) {
     <View style={estilos.container}>
       {/* Header */}
       <View style={estilos.header}>
-        <View>
-          <Text style={estilos.bemVindo}>Olá, {usuario?.nome.split(' ')[0]}</Text>
-          <Text style={estilos.headerSub}>Suas ordens de serviço</Text>
+        <View style={{flex: 1}}>
+          <Text style={estilos.bemVindo}>
+            Olá, {usuario?.nome.split(' ')[0]}
+          </Text>
+          <View style={estilos.perfilRow}>
+            <View style={[estilos.perfilBadge, isGestor && estilos.perfilBadgeGestor]}>
+              <Text style={estilos.perfilBadgeText}>
+                {isGestor ? 'Gestor' : 'Técnico'}
+              </Text>
+            </View>
+            <Text style={estilos.headerSub}>
+              {isGestor ? 'Todas as ordens de serviço' : 'Suas ordens de serviço'}
+            </Text>
+          </View>
         </View>
         <View style={estilos.headerAcoes}>
           {naoLidas > 0 && (
@@ -80,11 +93,27 @@ export function HomeScreen({navigation}: Props) {
               <Text style={estilos.notifNum}>{naoLidas > 99 ? '99+' : naoLidas}</Text>
             </View>
           )}
-          <View style={estilos.avatar}>
+          <View style={[estilos.avatar, isGestor && estilos.avatarGestor]}>
             <Text style={estilos.avatarText}>{iniciais}</Text>
           </View>
         </View>
       </View>
+
+      {/* Resumo rápido para gestor */}
+      {isGestor && osList.length > 0 && (
+        <View style={estilos.resumoRow}>
+          {[
+            {label: 'Total', valor: osList.length, cor: CORES.azul700},
+            {label: 'Em campo', valor: osList.filter(o => o.situacao_local === 'em_andamento').length, cor: CORES.amarelo},
+            {label: 'Abertas', valor: osList.filter(o => o.situacao_local === 'aberto').length, cor: CORES.cinza500},
+          ].map(item => (
+            <View key={item.label} style={estilos.resumoItem}>
+              <Text style={[estilos.resumoValor, {color: item.cor}]}>{item.valor}</Text>
+              <Text style={estilos.resumoLabel}>{item.label}</Text>
+            </View>
+          ))}
+        </View>
+      )}
 
       {/* Abas de filtro */}
       <ScrollView
@@ -133,6 +162,7 @@ export function HomeScreen({navigation}: Props) {
           renderItem={({item}) => (
             <OsCard
               os={item}
+              mostrarTecnico={isGestor}
               onPress={() => navigation.navigate('OsDetail', {osId: item.id})}
             />
           )}
@@ -141,7 +171,11 @@ export function HomeScreen({navigation}: Props) {
               <Text style={estilos.vazioIcon}>📋</Text>
               <Text style={estilos.vazioText}>Nenhuma OS encontrada.</Text>
               <Text style={estilos.vazioSub}>
-                {abaAtiva ? 'Tente mudar o filtro.' : 'Aguarde atribuição pelo gestor.'}
+                {abaAtiva
+                  ? 'Tente mudar o filtro.'
+                  : isGestor
+                  ? 'Nenhuma OS cadastrada ainda.'
+                  : 'Aguarde atribuição pelo gestor.'}
               </Text>
             </View>
           }
@@ -163,7 +197,16 @@ const estilos = StyleSheet.create({
     alignItems: 'center',
   },
   bemVindo: {color: '#fff', fontSize: 18, fontWeight: '700'},
-  headerSub: {color: 'rgba(255,255,255,0.7)', fontSize: 12.5, marginTop: 2},
+  perfilRow: {flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4},
+  perfilBadge: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  perfilBadgeGestor: {backgroundColor: 'rgba(255,200,0,0.25)'},
+  perfilBadgeText: {color: '#fff', fontSize: 10, fontWeight: '700'},
+  headerSub: {color: 'rgba(255,255,255,0.65)', fontSize: 12},
   headerAcoes: {flexDirection: 'row', alignItems: 'center', gap: 10, position: 'relative'},
   notifBadge: {
     position: 'absolute',
@@ -189,7 +232,22 @@ const estilos = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'rgba(255,255,255,0.3)',
   },
+  avatarGestor: {backgroundColor: '#b8860b'},
   avatarText: {color: '#fff', fontWeight: '700', fontSize: 14},
+
+  resumoRow: {
+    backgroundColor: CORES.branco,
+    flexDirection: 'row',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: CORES.cinza100,
+    gap: 24,
+  },
+  resumoItem: {alignItems: 'center'},
+  resumoValor: {fontSize: 20, fontWeight: '800'},
+  resumoLabel: {fontSize: 11, color: CORES.cinza500, fontWeight: '600', marginTop: 1},
+
   abasScroll: {backgroundColor: CORES.branco, maxHeight: 52},
   abasContainer: {
     paddingHorizontal: 12,

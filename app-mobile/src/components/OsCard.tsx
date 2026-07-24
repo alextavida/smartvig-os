@@ -8,9 +8,10 @@ import {PriorityBadge} from './PriorityBadge';
 interface Props {
   os: OS;
   onPress: () => void;
+  mostrarTecnico?: boolean;
 }
 
-export function OsCard({os, onPress}: Props) {
+export function OsCard({os, onPress, mostrarTecnico = false}: Props) {
   const dataFormatada = os.data_agendamento
     ? new Date(os.data_agendamento + 'T12:00:00').toLocaleDateString('pt-BR')
     : 'Sem data';
@@ -18,7 +19,12 @@ export function OsCard({os, onPress}: Props) {
   return (
     <TouchableOpacity style={estilos.card} onPress={onPress} activeOpacity={0.75}>
       <View style={estilos.cabecalho}>
-        <Text style={estilos.numero}>#{os.id}</Text>
+        <View style={estilos.cabecalhoEsq}>
+          <Text style={estilos.numero}>#{os.id}</Text>
+          {os.codigo ? (
+            <Text style={estilos.codigo}>{os.codigo}</Text>
+          ) : null}
+        </View>
         <StatusBadge status={os.situacao_local} tamanho="sm" />
       </View>
 
@@ -34,8 +40,18 @@ export function OsCard({os, onPress}: Props) {
 
       <Text style={estilos.detalhe}>📅 {dataFormatada}</Text>
 
+      {mostrarTecnico && (
+        <Text style={estilos.tecnico} numberOfLines={1}>
+          👤 {os.tecnico_responsavel_nome ?? 'Sem técnico atribuído'}
+        </Text>
+      )}
+
       <View style={estilos.rodape}>
-        <PriorityBadge prioridade={os.prioridade} />
+        {os.prioridade ? (
+          <PriorityBadge prioridade={os.prioridade} />
+        ) : (
+          <View />
+        )}
         {os.situacao_local === 'em_andamento' && (
           <View style={estilos.ativo}>
             <View style={estilos.pulseDot} />
@@ -65,10 +81,20 @@ const estilos = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
+  cabecalhoEsq: {flexDirection: 'row', alignItems: 'center', gap: 8},
   numero: {
     fontWeight: '800',
     fontSize: 13,
     color: CORES.cinza500,
+  },
+  codigo: {
+    fontSize: 12,
+    color: CORES.azul700,
+    fontWeight: '600',
+    backgroundColor: CORES.azul100,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
   },
   cliente: {
     fontWeight: '700',
@@ -80,6 +106,13 @@ const estilos = StyleSheet.create({
     fontSize: 13,
     color: CORES.cinza500,
     marginBottom: 4,
+  },
+  tecnico: {
+    fontSize: 12.5,
+    color: CORES.azul700,
+    fontWeight: '600',
+    marginBottom: 4,
+    marginTop: 2,
   },
   rodape: {
     flexDirection: 'row',

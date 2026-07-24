@@ -65,7 +65,7 @@ $stmtTotal->execute($parametros);
 $total = (int) $stmtTotal->fetchColumn();
 
 $sql = "SELECT os.id, os.gc_os_id, os.codigo, os.cliente_nome, os.cliente_endereco, os.cliente_telefone,
-               os.situacao_local, os.data_agendamento, os.data_conclusao, os.tecnico_id,
+               os.situacao_local, os.prioridade, os.data_agendamento, os.data_conclusao, os.tecnico_id,
                os.latitude_atual, os.longitude_atual, os.criado_em, os.atualizado_em,
                resp.nome AS tecnico_responsavel_nome
         FROM ordens_servico os
