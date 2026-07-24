@@ -109,6 +109,16 @@ function inicialTecnico(string $nome): string
 
 <div id="alertaDetalhe"></div>
 
+<?php if ($os['gc_os_id']): ?>
+<div class="card" id="painel-gc" style="border-left:4px solid #1d4ed8;">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+    <strong style="color:#1d4ed8;">Dados do GestãoClick (ao vivo)</strong>
+    <span id="gc-status" style="font-size:12px;color:#64748b;">Carregando...</span>
+  </div>
+  <div id="gc-dados" style="margin-top:12px;font-size:13px;"></div>
+</div>
+<?php endif; ?>
+
 <div class="card">
   <h3 style="margin-top:0;">OS #<?= (int) $os['id'] ?> &middot; <?= htmlspecialchars($os['cliente_nome'] ?? '-') ?></h3>
   <form id="formAtualizarOs">
@@ -229,8 +239,73 @@ function inicialTecnico(string $nome): string
 </div>
 
 <script>
-const OS_ID  = <?= (int) $os['id'] ?>;
+const OS_ID    = <?= (int) $os['id'] ?>;
 const GC_OS_ID = <?= (int) ($os['gc_os_id'] ?? 0) ?>;
+
+// Carrega dados ao vivo do GestãoClick se a OS tiver gc_os_id
+if (GC_OS_ID) {
+  (async () => {
+    const statusEl = document.getElementById('gc-status');
+    const dadosEl  = document.getElementById('gc-dados');
+    try {
+      const d = await apiGet('/os/dados-gc.php?gc_os_id=' + GC_OS_ID);
+      const ex = d.extraido || {};
+      const raw = d.raw || {};
+
+      statusEl.style.color = '#16803c';
+      statusEl.textContent = 'Sincronizado com GC';
+
+      // Renderiza painel de dados GC
+      const cel = (label, val) => val
+        ? `<div style="margin-bottom:6px;"><span style="color:#64748b;min-width:110px;display:inline-block;">${label}:</span> <strong>${escHtml(String(val))}</strong></div>`
+        : '';
+
+      let html = '';
+      html += cel('Cliente', ex.cliente_nome);
+      html += cel('Telefone', ex.cliente_telefone);
+      html += cel('Endereço', ex.cliente_endereco);
+      html += cel('Código OS', ex.codigo);
+      html += cel('Agendamento', ex.data_agendamento);
+      html += cel('Descrição', ex.descricao);
+
+      // Produtos/serviços
+      const prods = ex.produtos;
+      if (Array.isArray(prods) && prods.length > 0) {
+        html += '<div style="margin-top:10px;"><strong>Produtos/Serviços do GC:</strong><table style="width:100%;margin-top:6px;font-size:12px;"><thead><tr style="text-align:left;"><th>Nome</th><th>Qtd</th><th>Valor</th></tr></thead><tbody>';
+        prods.forEach(p => {
+          const nome = p.nome || p.descricao || p.produto || JSON.stringify(p);
+          const qtd  = p.quantidade || p.qtd || '-';
+          const val  = p.valor || p.preco || p.valor_venda || '-';
+          html += `<tr><td>${escHtml(String(nome))}</td><td>${qtd}</td><td>${val}</td></tr>`;
+        });
+        html += '</tbody></table></div>';
+      }
+
+      // Chaves brutas para diagnóstico (colapsável)
+      html += `<details style="margin-top:10px;"><summary style="cursor:pointer;font-size:11px;color:#94a3b8;">Ver todos os campos GC (${d.chaves?.length || 0} campos)</summary>
+        <pre style="font-size:11px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:8px;max-height:200px;overflow:auto;margin-top:4px;">${escHtml(JSON.stringify(raw, null, 2))}</pre>
+      </details>`;
+
+      dadosEl.innerHTML = html || '<span style="color:#94a3b8;">Sem dados detalhados disponíveis no GC.</span>';
+
+      // Preenche campos do formulário local se estiverem vazios
+      const fill = (id, val) => { const el = document.getElementById ? document.querySelector(`[name="${id}"]`) : null; if (el && !el.value && val) el.value = val; };
+      fill('cliente_nome', ex.cliente_nome);
+      fill('cliente_telefone', ex.cliente_telefone);
+      fill('cliente_endereco', ex.cliente_endereco);
+      fill('observacoes', ex.descricao);
+
+    } catch (e) {
+      statusEl.style.color = '#c0392b';
+      statusEl.textContent = 'Erro ao buscar do GC: ' + e.message;
+      dadosEl.innerHTML = '';
+    }
+  })();
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
 
 async function resyncOS() {
   const btn = document.getElementById('btn-resync');

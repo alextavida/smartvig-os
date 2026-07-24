@@ -27,24 +27,51 @@ $pdo = obterConexao();
 $gc  = new GestaoClickAPI();
 
 /**
- * Monta string de endereço a partir do objeto endereço do GestaoClick.
- * Estrutura: enderecos[N]['endereco'] = { logradouro, numero, bairro, nome_cidade, estado }
+ * Extrai nome do cliente de um item de OS do GC (tenta todos os campos conhecidos).
+ */
+function extrairNomeClienteGc(array $item): ?string
+{
+    $obj = is_array($item['cliente'] ?? null) ? $item['cliente'] : [];
+
+    return $obj['nome']         ?? $obj['razao_social']   ?? $obj['nome_completo']
+        ?? $item['nome_cliente']  ?? $item['cliente_nome']
+        ?? $item['razao_social']  ?? $item['nome']
+        ?? null;
+}
+
+/**
+ * Extrai telefone do cliente de um item de OS do GC.
+ */
+function extrairTelefoneClienteGc(array $item): ?string
+{
+    $obj = is_array($item['cliente'] ?? null) ? $item['cliente'] : [];
+
+    return $obj['telefone'] ?? $obj['celular']
+        ?? $item['telefone_cliente'] ?? $item['cliente_telefone']
+        ?? $item['telefone'] ?? null;
+}
+
+/**
+ * Monta string de endereço a partir de uma lista de endereços do GestaoClick.
+ * Suporta estrutura: enderecos[N]['endereco'] = { logradouro, numero, ... }
+ * E estrutura plana:  enderecos[N] = { logradouro, numero, ... }
  */
 function extrairEnderecoGc(?array $enderecos): ?string
 {
     if (empty($enderecos) || !is_array($enderecos)) {
         return null;
     }
-    $end = $enderecos[0]['endereco'] ?? [];
-    if (empty($end)) {
+    // Tenta estrutura aninhada (enderecos[0]['endereco']) e plana (enderecos[0])
+    $end = $enderecos[0]['endereco'] ?? $enderecos[0] ?? [];
+    if (empty($end) || !is_array($end)) {
         return null;
     }
     $partes = array_filter([
-        trim(($end['logradouro'] ?? '') . ' ' . ($end['numero'] ?? '')),
+        trim(($end['logradouro'] ?? $end['endereco'] ?? '') . ' ' . ($end['numero'] ?? '')),
         $end['complemento'] ?? '',
-        $end['bairro'] ?? '',
-        $end['nome_cidade'] ?? '',
-        $end['estado'] ?? '',
+        $end['bairro']      ?? '',
+        $end['nome_cidade'] ?? $end['cidade'] ?? '',
+        $end['estado']      ?? '',
     ]);
     $str = trim(implode(', ', $partes));
     return $str !== '' ? $str : null;
@@ -101,23 +128,11 @@ try {
                         ?? $item['observacoes'] ?? $item['servico'] ?? null;
 
             // --- Cliente: GC pode retornar objeto aninhado OU campos planos ---
-            $clienteObj = is_array($item['cliente'] ?? null) ? $item['cliente'] : [];
+            $clienteNome     = extrairNomeClienteGc($item);
+            $clienteTelefone = extrairTelefoneClienteGc($item);
 
-            // Tenta TODOS os nomes possíveis que o GC pode usar
-            $clienteNome = $clienteObj['nome']         ?? $clienteObj['razao_social']
-                        ?? $clienteObj['nome_completo'] ?? null;
-            if (empty($clienteNome)) {
-                // Campos planos no próprio item
-                $clienteNome = $item['nome_cliente']   ?? $item['cliente_nome']
-                            ?? $item['razao_social']   ?? $item['nome']
-                            ?? null;
-            }
-
-            $clienteTelefone = $clienteObj['telefone']  ?? $clienteObj['celular']
-                            ?? $item['telefone_cliente'] ?? $item['cliente_telefone']
-                            ?? $item['telefone']         ?? null;
-
-            $clienteEndereco = extrairEnderecoGc($clienteObj['enderecos'] ?? null);
+            $clienteObj      = is_array($item['cliente'] ?? null) ? $item['cliente'] : [];
+            $clienteEndereco = extrairEnderecoGc($clienteObj['enderecos'] ?? $item['enderecos'] ?? null);
 
             // Se cliente_id ainda não veio, tenta pelo objeto
             if ($gcClienteId === null && !empty($clienteObj['id'])) {
@@ -138,23 +153,25 @@ try {
                 $pdo->prepare(
                     'UPDATE ordens_servico SET
                         gc_situacao_id   = :gc_situacao_id,
-                        gc_cliente_id    = :gc_cliente_id,
-                        codigo           = :codigo,
+                        gc_cliente_id    = COALESCE(:gc_cliente_id, gc_cliente_id),
+                        codigo           = COALESCE(:codigo, codigo),
                         cliente_nome     = COALESCE(:cliente_nome, cliente_nome),
                         cliente_endereco = COALESCE(:cliente_endereco, cliente_endereco),
                         cliente_telefone = COALESCE(:cliente_telefone, cliente_telefone),
                         observacoes      = COALESCE(observacoes, :descricao_gc),
+                        data_agendamento = COALESCE(:data_agendamento, data_agendamento),
                         sincronizado_gc  = 1
                      WHERE id = :id'
                 )->execute([
-                    'gc_situacao_id'  => $gcSituacaoId,
-                    'gc_cliente_id'   => $gcClienteId,
-                    'codigo'          => $codigo,
-                    'cliente_nome'    => $clienteNome,
-                    'cliente_endereco'=> $clienteEndereco,
-                    'cliente_telefone'=> $clienteTelefone,
-                    'descricao_gc'    => $descricaoGc,
-                    'id'              => $existente['id'],
+                    'gc_situacao_id'   => $gcSituacaoId,
+                    'gc_cliente_id'    => $gcClienteId,
+                    'codigo'           => $codigo,
+                    'cliente_nome'     => $clienteNome,
+                    'cliente_endereco' => $clienteEndereco,
+                    'cliente_telefone' => $clienteTelefone,
+                    'descricao_gc'     => $descricaoGc,
+                    'data_agendamento' => $dataAgendamento,
+                    'id'               => $existente['id'],
                 ]);
                 $atualizadas++;
             } else {

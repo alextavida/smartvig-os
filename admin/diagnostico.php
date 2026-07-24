@@ -11,6 +11,7 @@ $tituloPagina = 'Diagnostico GestaoClick';
 $paginaAtiva = '';
 require_once __DIR__ . '/../includes/header.php';
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../config/gestaoclick.php';
 
 $pdo = obterConexao();
 $gcToken  = obterConfiguracao('gc_access_token', '') ?? '';
