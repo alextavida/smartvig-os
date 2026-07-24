@@ -158,6 +158,7 @@ async function sincronizarGC(silencioso) {
     const r = await fetch('/app-tecnicos/api/os/sincronizar.php', {
       method: 'POST',
       headers: {'Authorization': 'Bearer ' + (window.APP_JWT || ''), 'Content-Type': 'application/json'},
+      body: JSON.stringify({ force: true }),
     });
     const d = await r.json();
     if (d.sucesso) {

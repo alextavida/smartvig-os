@@ -257,43 +257,100 @@ if (GC_OS_ID) {
 
       // Renderiza painel de dados GC
       const cel = (label, val) => val
-        ? `<div style="margin-bottom:6px;"><span style="color:#64748b;min-width:110px;display:inline-block;">${label}:</span> <strong>${escHtml(String(val))}</strong></div>`
+        ? `<div style="margin-bottom:6px;"><span style="color:#64748b;min-width:120px;display:inline-block;">${label}:</span> <strong>${escHtml(String(val))}</strong></div>`
         : '';
 
-      let html = '';
+      let html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 24px;">';
       html += cel('Cliente', ex.cliente_nome);
-      html += cel('Telefone', ex.cliente_telefone);
-      html += cel('Endereço', ex.cliente_endereco);
       html += cel('Código OS', ex.codigo);
-      html += cel('Agendamento', ex.data_agendamento);
-      html += cel('Descrição', ex.descricao);
+      html += cel('Telefone', ex.cliente_telefone);
+      html += cel('Data entrada', ex.data_entrada);
+      html += cel('Endereço', ex.cliente_endereco);
+      html += cel('Situação GC', ex.nome_situacao);
+      html += cel('Técnico GC', ex.nome_tecnico);
+      html += '</div>';
 
-      // Produtos/serviços
-      const prods = ex.produtos;
-      if (Array.isArray(prods) && prods.length > 0) {
-        html += '<div style="margin-top:10px;"><strong>Produtos/Serviços do GC:</strong><table style="width:100%;margin-top:6px;font-size:12px;"><thead><tr style="text-align:left;"><th>Nome</th><th>Qtd</th><th>Valor</th></tr></thead><tbody>';
-        prods.forEach(p => {
-          const nome = p.nome || p.descricao || p.produto || JSON.stringify(p);
-          const qtd  = p.quantidade || p.qtd || '-';
-          const val  = p.valor || p.preco || p.valor_venda || '-';
-          html += `<tr><td>${escHtml(String(nome))}</td><td>${qtd}</td><td>${val}</td></tr>`;
+      // Equipamentos (preenchidos pelo técnico ao finalizar OS)
+      const eqs = ex.equipamentos;
+      if (Array.isArray(eqs) && eqs.length > 0) {
+        eqs.forEach((eq, i) => {
+          html += `<div style="margin-top:14px;border-top:1px solid #e2e8f0;padding-top:12px;">
+            <strong style="font-size:13px;">🔧 Equipamento ${eqs.length > 1 ? '#' + (i+1) : ''}</strong>
+            <div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:0 24px;font-size:13px;">
+              ${eq.tipo    ? cel('Tipo',   eq.tipo)   : ''}
+              ${eq.marca   ? cel('Marca',  eq.marca)  : ''}
+              ${eq.modelo  ? cel('Modelo', eq.modelo) : ''}
+              ${eq.serie   ? cel('Série',  eq.serie)  : ''}
+            </div>`;
+          if (eq.defeitos) {
+            html += `<div style="margin-top:8px;background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:8px 12px;">
+              <div style="font-size:11px;color:#92400e;font-weight:700;margin-bottom:4px;">DEFEITO RELATADO</div>
+              <div style="font-size:13px;white-space:pre-wrap;">${escHtml(eq.defeitos)}</div>
+            </div>`;
+          }
+          if (eq.solucao) {
+            html += `<div style="margin-top:6px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:8px 12px;">
+              <div style="font-size:11px;color:#166534;font-weight:700;margin-bottom:4px;">SOLUÇÃO APLICADA</div>
+              <div style="font-size:13px;white-space:pre-wrap;">${escHtml(eq.solucao)}</div>
+            </div>`;
+          }
+          if (eq.laudo) {
+            html += `<div style="margin-top:6px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:8px 12px;">
+              <div style="font-size:11px;color:#1d4ed8;font-weight:700;margin-bottom:4px;">LAUDO TÉCNICO</div>
+              <div style="font-size:13px;white-space:pre-wrap;">${escHtml(eq.laudo)}</div>
+            </div>`;
+          }
+          html += '</div>';
+        });
+      }
+
+      // Observações da OS no GC
+      if (ex.observacoes) {
+        html += `<div style="margin-top:10px;">${cel('Observações GC', ex.observacoes)}</div>`;
+      }
+
+      // Serviços
+      const servs = ex.servicos;
+      if (Array.isArray(servs) && servs.length > 0) {
+        html += '<div style="margin-top:10px;"><strong>Serviços do GC:</strong><table style="width:100%;margin-top:6px;font-size:12px;"><thead><tr style="text-align:left;"><th>Serviço</th><th>Qtd</th><th>Valor</th></tr></thead><tbody>';
+        servs.forEach(s => {
+          html += `<tr><td>${escHtml(String(s.nome || s.descricao || s.servico || ''))}</td><td>${s.quantidade || '-'}</td><td>${s.valor || s.preco || '-'}</td></tr>`;
         });
         html += '</tbody></table></div>';
       }
 
-      // Chaves brutas para diagnóstico (colapsável)
-      html += `<details style="margin-top:10px;"><summary style="cursor:pointer;font-size:11px;color:#94a3b8;">Ver todos os campos GC (${d.chaves?.length || 0} campos)</summary>
+      // Produtos/peças
+      const prods = ex.produtos;
+      if (Array.isArray(prods) && prods.length > 0) {
+        html += '<div style="margin-top:10px;"><strong>Produtos/Peças do GC:</strong><table style="width:100%;margin-top:6px;font-size:12px;"><thead><tr style="text-align:left;"><th>Nome</th><th>Qtd</th><th>Valor</th></tr></thead><tbody>';
+        prods.forEach(p => {
+          const nome = p.nome || p.descricao || p.produto || JSON.stringify(p);
+          html += `<tr><td>${escHtml(String(nome))}</td><td>${p.quantidade || p.qtd || '-'}</td><td>${p.valor || p.preco || p.valor_venda || '-'}</td></tr>`;
+        });
+        html += '</tbody></table></div>';
+      }
+
+      // Raw JSON colapsável
+      html += `<details style="margin-top:12px;"><summary style="cursor:pointer;font-size:11px;color:#94a3b8;">Ver JSON completo do GC (${d.chaves?.length || 0} campos)</summary>
         <pre style="font-size:11px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:8px;max-height:200px;overflow:auto;margin-top:4px;">${escHtml(JSON.stringify(raw, null, 2))}</pre>
       </details>`;
 
       dadosEl.innerHTML = html || '<span style="color:#94a3b8;">Sem dados detalhados disponíveis no GC.</span>';
 
       // Preenche campos do formulário local se estiverem vazios
-      const fill = (id, val) => { const el = document.getElementById ? document.querySelector(`[name="${id}"]`) : null; if (el && !el.value && val) el.value = val; };
+      const fill = (name, val) => { const el = document.querySelector(`[name="${name}"]`); if (el && !el.value.trim() && val) el.value = val; };
       fill('cliente_nome', ex.cliente_nome);
       fill('cliente_telefone', ex.cliente_telefone);
       fill('cliente_endereco', ex.cliente_endereco);
-      fill('observacoes', ex.descricao);
+      // Preenche observacoes com defeito+tipo se vazio
+      if (Array.isArray(eqs) && eqs.length > 0 && eqs[0].defeitos) {
+        const eq0 = eqs[0];
+        const textoInicial = [
+          eq0.tipo    ? 'Equipamento: ' + eq0.tipo    : '',
+          eq0.defeitos ? 'Defeito: '     + eq0.defeitos : '',
+        ].filter(Boolean).join('\n');
+        fill('observacoes', textoInicial);
+      }
 
     } catch (e) {
       statusEl.style.color = '#c0392b';
@@ -316,6 +373,7 @@ async function resyncOS() {
     const r = await fetch('/app-tecnicos/api/os/sincronizar.php', {
       method: 'POST',
       headers: {'Authorization': 'Bearer ' + (window.APP_JWT || ''), 'Content-Type': 'application/json'},
+      body: JSON.stringify({ force: true }),
     });
     const d = await r.json();
     if (d.sucesso) {

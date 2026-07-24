@@ -58,22 +58,42 @@ try {
     }
 
     // Produtos/serviços incluídos na OS
-    $produtos = $raw['produtos']        ?? $raw['itens']
-             ?? $raw['servicos']        ?? $raw['pecas']
-             ?? [];
+    $produtos  = $raw['produtos'] ?? $raw['itens'] ?? $raw['pecas'] ?? [];
+    $servicos  = $raw['servicos'] ?? [];
+
+    // Equipamentos — confirmados como equipamentos[N].equipamento = { equipamento, defeitos, solucao, laudo, marca, modelo, serie }
+    $equipamentosExtrato = [];
+    foreach (($raw['equipamentos'] ?? []) as $eqItem) {
+        $eq = $eqItem['equipamento'] ?? $eqItem ?? [];
+        if (!is_array($eq)) { continue; }
+        $equipamentosExtrato[] = [
+            'tipo'       => $eq['equipamento'] ?? $eq['tipo'] ?? null,
+            'marca'      => $eq['marca']        ?? null,
+            'modelo'     => $eq['modelo']       ?? null,
+            'serie'      => $eq['serie']        ?? null,
+            'defeitos'   => $eq['defeitos']     ?? null,
+            'solucao'    => $eq['solucao']      ?? null,
+            'laudo'      => $eq['laudo']        ?? null,
+            'acessorios' => $eq['acessorios']   ?? null,
+        ];
+    }
 
     responderSucesso([
-        'chaves'          => $chaves,
-        'raw'             => $raw,
-        'extraido'        => [
-            'cliente_nome'    => $clienteNome,
-            'cliente_telefone'=> $clienteTel,
-            'cliente_endereco'=> $endCliente,
-            'codigo'          => $raw['codigo'] ?? $raw['numero'] ?? $raw['numero_os'] ?? null,
-            'descricao'       => $raw['titulo'] ?? $raw['descricao'] ?? $raw['problema'] ?? $raw['observacoes'] ?? null,
-            'data_agendamento'=> $raw['data_prevista'] ?? $raw['data_agendamento'] ?? $raw['data'] ?? null,
-            'situacao_id'     => $raw['situacao_id'] ?? null,
-            'produtos'        => $produtos,
+        'chaves'   => $chaves,
+        'raw'      => $raw,
+        'extraido' => [
+            'cliente_nome'     => $clienteNome,
+            'cliente_telefone' => $clienteTel,
+            'cliente_endereco' => $endCliente,
+            'codigo'           => $raw['codigo'] ?? $raw['numero'] ?? $raw['numero_os'] ?? null,
+            'data_entrada'     => $raw['data_entrada'] ?? $raw['data_agendamento'] ?? $raw['data'] ?? null,
+            'situacao_id'      => $raw['situacao_id']    ?? null,
+            'nome_situacao'    => $raw['nome_situacao']  ?? null,
+            'nome_tecnico'     => $raw['nome_tecnico']   ?? null,
+            'observacoes'      => $raw['observacoes']    ?? null,
+            'produtos'         => $produtos,
+            'servicos'         => $servicos,
+            'equipamentos'     => $equipamentosExtrato,
         ],
     ]);
 } catch (GestaoClickApiException $e) {

@@ -91,6 +91,9 @@ function mapaSituacoes(): array
 }
 
 $situacoesMap = mapaSituacoes();
+// force=1 → sobrescreve cliente_nome mesmo se o registro já tem valor (corrige syncs antigos)
+$body = json_decode(file_get_contents('php://input'), true) ?? [];
+$forceAtualizar = !empty($body['force']) || !empty($_GET['force']);
 $criadas      = 0;
 $atualizadas  = 0;
 $erros        = [];
@@ -120,12 +123,30 @@ try {
             // --- Situação e datas ---
             $gcSituacaoId    = isset($item['situacao_id']) ? (int) $item['situacao_id'] : null;
             $gcClienteId     = isset($item['cliente_id']) ? (int) $item['cliente_id'] : null;
-            $dataAgendamento = $item['data_prevista'] ?? $item['data_agendamento']
-                            ?? $item['data'] ?? $item['data_emissao'] ?? null;
+            // data_entrada é o campo confirmado no GestãoClick
+            $dataAgendamento = $item['data_entrada']     ?? $item['data_agendamento']
+                            ?? $item['data_prevista']   ?? $item['data']
+                            ?? $item['data_emissao']    ?? null;
 
-            // --- Descrição / título ---
-            $descricaoGc = $item['titulo'] ?? $item['descricao'] ?? $item['problema']
-                        ?? $item['observacoes'] ?? $item['servico'] ?? null;
+            // --- Equipamentos (CONTROLE DE ACESSO, CFTV, etc.) ---
+            $eqArr   = $item['equipamentos'] ?? [];
+            $eqTexto = '';
+            if (!empty($eqArr) && is_array($eqArr[0]['equipamento'] ?? null)) {
+                $eq     = $eqArr[0]['equipamento'];
+                $partes = array_filter([
+                    !empty($eq['equipamento']) ? 'Equipamento: ' . $eq['equipamento'] : '',
+                    !empty($eq['marca'])       ? 'Marca: '       . $eq['marca']       : '',
+                    !empty($eq['modelo'])      ? 'Modelo: '      . $eq['modelo']      : '',
+                    !empty($eq['serie'])       ? 'Série: '       . $eq['serie']       : '',
+                    !empty($eq['defeitos'])    ? 'Defeito: '     . $eq['defeitos']    : '',
+                ]);
+                $eqTexto = implode("\n", $partes);
+            }
+
+            // --- Descrição: observacoes do GC > equipamentos > titulo/descricao ---
+            $descricaoGc = ($item['observacoes'] ?: null)
+                        ?? ($eqTexto ?: null)
+                        ?? ($item['titulo'] ?? $item['descricao'] ?? $item['problema'] ?? null);
 
             // --- Cliente: GC pode retornar objeto aninhado OU campos planos ---
             $clienteNome     = extrairNomeClienteGc($item);
@@ -144,32 +165,37 @@ try {
                 $clienteNome = 'Cliente GC #' . $gcClienteId;
             }
 
+            // Normaliza vazios para null (COALESCE ignora null, não string vazia)
+            $clienteNome     = ($clienteNome     !== '' ? $clienteNome     : null);
+            $clienteTelefone = ($clienteTelefone !== '' ? $clienteTelefone : null);
+            $clienteEndereco = ($clienteEndereco !== '' ? $clienteEndereco : null);
+
             // --- Upsert ---
             $stmt = $pdo->prepare('SELECT id, situacao_local FROM ordens_servico WHERE gc_os_id = :gc_os_id LIMIT 1');
             $stmt->execute(['gc_os_id' => $gcOsId]);
             $existente = $stmt->fetch();
 
             if ($existente) {
+                // force=1 → sempre sobrescreve cliente_nome (corrige registros com nome vazio de syncs antigos)
+                $sqlNome = $forceAtualizar ? ':cliente_nome' : 'COALESCE(:cliente_nome, NULLIF(cliente_nome, \'\'))';
                 $pdo->prepare(
-                    'UPDATE ordens_servico SET
+                    "UPDATE ordens_servico SET
                         gc_situacao_id   = :gc_situacao_id,
                         gc_cliente_id    = COALESCE(:gc_cliente_id, gc_cliente_id),
                         codigo           = COALESCE(:codigo, codigo),
-                        cliente_nome     = COALESCE(:cliente_nome, cliente_nome),
-                        cliente_endereco = COALESCE(:cliente_endereco, cliente_endereco),
+                        cliente_nome     = {$sqlNome},
                         cliente_telefone = COALESCE(:cliente_telefone, cliente_telefone),
-                        observacoes      = COALESCE(observacoes, :descricao_gc),
+                        cliente_endereco = COALESCE(:cliente_endereco, cliente_endereco),
                         data_agendamento = COALESCE(:data_agendamento, data_agendamento),
                         sincronizado_gc  = 1
-                     WHERE id = :id'
+                     WHERE id = :id"
                 )->execute([
                     'gc_situacao_id'   => $gcSituacaoId,
                     'gc_cliente_id'    => $gcClienteId,
                     'codigo'           => $codigo,
                     'cliente_nome'     => $clienteNome,
-                    'cliente_endereco' => $clienteEndereco,
                     'cliente_telefone' => $clienteTelefone,
-                    'descricao_gc'     => $descricaoGc,
+                    'cliente_endereco' => $clienteEndereco,
                     'data_agendamento' => $dataAgendamento,
                     'id'               => $existente['id'],
                 ]);
