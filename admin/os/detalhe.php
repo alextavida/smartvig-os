@@ -110,7 +110,13 @@ function inicialTecnico(string $nome): string
 <div id="alertaDetalhe"></div>
 
 <div class="card">
-  <h3 style="margin-top:0;">OS #<?= (int) $os['id'] ?> &middot; <?= htmlspecialchars($os['cliente_nome'] ?? '-') ?></h3>
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:4px;">
+    <h3 style="margin:0;">OS #<?= (int) $os['id'] ?> &middot; <?= htmlspecialchars($os['cliente_nome'] ?? '-') ?></h3>
+    <a href="/app-tecnicos/admin/clientes/historico.php?nome=<?= urlencode($os['cliente_nome'] ?? '') ?>"
+       class="btn btn-secundario btn-sm" style="font-size:11px;" title="Ver todas OS deste cliente">
+      📋 Histórico do cliente
+    </a>
+  </div>
 
   <?php if ($os['gc_os_id']): ?>
   <!-- Faixa de equipamento GC — preenchida via JS -->

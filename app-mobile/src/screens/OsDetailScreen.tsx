@@ -16,17 +16,21 @@ import {
 import {NativeStackScreenProps} from '@react-navigation/native-stack';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Geolocation from '@react-native-community/geolocation';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import NetInfo from '@react-native-community/netinfo';
 import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
 import {
   visualizarOs, iniciarOs, pausarOs, reagendarOs, encerrarOs,
   salvarDescricao, adicionarProduto, atribuirTecnicos, buscarProdutosGC,
+  salvarTempo,
 } from '../api/os';
 import {listarTecnicos} from '../api/tecnicos';
 import {atualizarGps} from '../api/gps';
-import {uploadMidia} from '../api/midias';
+import {uploadMidia, uploadBase64Midia} from '../api/midias';
 import {OSDetalhe, TecnicoLista, ProdutoGC, GCEquipamento} from '../types';
 import {StatusBadge} from '../components/StatusBadge';
 import {PriorityBadge} from '../components/PriorityBadge';
+import {SignatureModal} from '../components/SignatureModal';
 import {useAuth} from '../hooks/useAuth';
 import {CORES, API_BASE_URL} from '../config';
 import {RootStackParamList} from '../navigation';
@@ -81,7 +85,17 @@ export function OsDetailScreen({route, navigation}: Props) {
   const [tecnicoResp, setTecnicoResp] = useState<number | null>(null);
   const [carregandoTec, setCarregandoTec] = useState(false);
 
-  const gpsTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Timer de atendimento
+  const [timerSegundos, setTimerSegundos] = useState(0);
+  const [timerInicio, setTimerInicio]     = useState<number | null>(null);
+  // Modo offline
+  const [isOnline, setIsOnline] = useState(true);
+  // Assinatura digital
+  const [modalAssinatura, setModalAssinatura] = useState(false);
+
+  const gpsTimer  = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timerRef  = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timerKey  = `timer_inicio_os_${osId}`;
 
   const carregar = useCallback(async () => {
     try {
@@ -121,6 +135,38 @@ export function OsDetailScreen({route, navigation}: Props) {
       if (gpsTimer.current) {clearInterval(gpsTimer.current);}
     };
   }, [os?.situacao_local, osId, isGestor]);
+
+  // Timer de atendimento — inicia/para conforme situacao_local
+  useEffect(() => {
+    if (isGestor || os?.situacao_local !== 'em_andamento') {
+      if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+      return;
+    }
+    let ativo = true;
+    AsyncStorage.getItem(timerKey).then(val => {
+      if (!ativo) { return; }
+      const inicio = val ? parseInt(val, 10) : Date.now();
+      if (!val) { AsyncStorage.setItem(timerKey, String(inicio)); }
+      setTimerInicio(inicio);
+      setTimerSegundos(Math.floor((Date.now() - inicio) / 1000));
+      if (timerRef.current) { clearInterval(timerRef.current); }
+      timerRef.current = setInterval(() => {
+        setTimerSegundos(Math.floor((Date.now() - inicio) / 1000));
+      }, 1000);
+    });
+    return () => {
+      ativo = false;
+      if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [os?.situacao_local, osId, isGestor]);
+
+  // Detecção de conexão (NetInfo)
+  useEffect(() => {
+    NetInfo.fetch().then(s => setIsOnline(s.isConnected ?? true));
+    const unsub = NetInfo.addEventListener(s => setIsOnline(s.isConnected ?? true));
+    return () => unsub();
+  }, []);
 
   // Busca produtos GC com debounce
   useEffect(() => {
@@ -162,6 +208,25 @@ export function OsDetailScreen({route, navigation}: Props) {
     } finally {
       setSalvando(false);
     }
+  }
+
+  function formatarTempo(seg: number): string {
+    const h = Math.floor(seg / 3600);
+    const m = Math.floor((seg % 3600) / 60);
+    const s = seg % 60;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  }
+
+  async function pararTimer(): Promise<void> {
+    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+    const val = await AsyncStorage.getItem(timerKey);
+    if (val) {
+      const seg = Math.floor((Date.now() - parseInt(val, 10)) / 1000);
+      if (seg > 0) { await salvarTempo(osId, seg).catch(() => {}); }
+      await AsyncStorage.removeItem(timerKey);
+    }
+    setTimerInicio(null);
+    setTimerSegundos(0);
   }
 
   function abrirRota() {
@@ -267,6 +332,12 @@ export function OsDetailScreen({route, navigation}: Props) {
     <>
       <ScrollView style={estilos.container} contentContainerStyle={estilos.scroll}>
 
+        {!isOnline && (
+          <View style={estilos.offlineBanner}>
+            <Text style={estilos.offlineText}>📵 Sem conexão — funcionalidades podem falhar</Text>
+          </View>
+        )}
+
         {sucesso ? (
           <View style={estilos.alertaSucesso}>
             <Text style={estilos.alertaSucessoText}>✓ {sucesso}</Text>
@@ -346,7 +417,11 @@ export function OsDetailScreen({route, navigation}: Props) {
               <TouchableOpacity
                 style={[estilos.botaoAcao, estilos.botaoPrimario]}
                 disabled={salvando}
-                onPress={() => acao(() => iniciarOs(osId), 'OS iniciada!')}>
+                onPress={() => acao(async () => {
+                    await iniciarOs(osId);
+                    const inicio = Date.now();
+                    await AsyncStorage.setItem(timerKey, String(inicio));
+                  }, 'OS iniciada!')}>
                 <Text style={estilos.botaoAcaoText}>▶ Iniciar</Text>
               </TouchableOpacity>
             )}
@@ -381,6 +456,15 @@ export function OsDetailScreen({route, navigation}: Props) {
               </TouchableOpacity>
             )}
 
+            {/* Coletar assinatura do cliente */}
+            {!isGestor && !['concluido', 'cancelado'].includes(situacao) && (
+              <TouchableOpacity
+                style={[estilos.botaoAcao, estilos.botaoNeutro]}
+                onPress={() => setModalAssinatura(true)}>
+                <Text style={[estilos.botaoAcaoText, {color: CORES.cinza700}]}>✍ Assinar</Text>
+              </TouchableOpacity>
+            )}
+
             {/* Ações exclusivas do gestor */}
             {isGestor && (
               <>
@@ -404,6 +488,13 @@ export function OsDetailScreen({route, navigation}: Props) {
               </>
             )}
           </View>
+
+          {situacao === 'em_andamento' && !isGestor && timerInicio !== null && (
+            <View style={estilos.timerBox}>
+              <Text style={estilos.timerText}>⏱ {formatarTempo(timerSegundos)}</Text>
+              <Text style={estilos.timerLabel}>tempo em atendimento</Text>
+            </View>
+          )}
 
           {situacao === 'em_andamento' && !isGestor && (
             <View style={estilos.gpsIndicador}>
@@ -659,7 +750,10 @@ export function OsDetailScreen({route, navigation}: Props) {
                 disabled={salvando}
                 onPress={() => {
                   if (!motivoPausa.trim()) {Alert.alert('Informe o motivo da pausa.'); return;}
-                  acao(() => pausarOs(osId, motivoPausa), 'OS pausada.').then(() => {
+                  acao(async () => {
+                    await pararTimer();
+                    await pausarOs(osId, motivoPausa);
+                  }, 'OS pausada.').then(() => {
                     setModalPausar(false); setMotivoPausa('');
                   });
                 }}>
@@ -751,7 +845,10 @@ export function OsDetailScreen({route, navigation}: Props) {
                 disabled={salvando}
                 onPress={() => {
                   if (!laudoFinal.trim()) {Alert.alert('Informe o laudo final.'); return;}
-                  acao(() => encerrarOs(osId, laudoFinal), 'OS encerrada com sucesso!').then(() => {
+                  acao(async () => {
+                    await pararTimer();
+                    await encerrarOs(osId, laudoFinal);
+                  }, 'OS encerrada com sucesso!').then(() => {
                     setModalEncerrar(false); setLaudoFinal('');
                   });
                 }}>
@@ -937,6 +1034,25 @@ export function OsDetailScreen({route, navigation}: Props) {
         </View>
       </Modal>
 
+      {/* Modal Assinatura Digital */}
+      <SignatureModal
+        visible={modalAssinatura}
+        onCancelar={() => setModalAssinatura(false)}
+        onConfirm={async base64 => {
+          setModalAssinatura(false);
+          setSalvando(true);
+          try {
+            await uploadBase64Midia(osId, 'foto', base64, 'assinatura_cliente.png');
+            mostrarSucesso('Assinatura registrada com sucesso!');
+            await carregar();
+          } catch (e: any) {
+            mostrarErro(e.message ?? 'Erro ao salvar assinatura.');
+          } finally {
+            setSalvando(false);
+          }
+        }}
+      />
+
       {/* Modal Histórico completo */}
       <Modal visible={modalHistorico} transparent animationType="slide">
         <View style={estilos.modalOverlay}>
@@ -1073,6 +1189,19 @@ const estilos = StyleSheet.create({
   },
   respBadgeSel: {backgroundColor: CORES.azul700, borderColor: CORES.azul700},
   respBadgeText: {fontSize: 11, fontWeight: '600', color: CORES.cinza500},
+  offlineBanner: {
+    backgroundColor: '#c62f2f', borderRadius: 8, padding: 10, marginBottom: 8,
+    flexDirection: 'row', alignItems: 'center',
+  },
+  offlineText: {color: '#fff', fontWeight: '700', fontSize: 13},
+  timerBox: {
+    backgroundColor: '#fffbeb', borderRadius: 10, padding: 10, marginTop: 10,
+    alignItems: 'center',
+  },
+  timerText: {
+    color: '#92400e', fontWeight: '900', fontSize: 22, letterSpacing: 2, fontVariant: ['tabular-nums'],
+  },
+  timerLabel: {color: '#92400e', fontSize: 11, marginTop: 2, opacity: 0.8},
   histRow: {marginBottom: 8},
   histAcao: {fontWeight: '700', fontSize: 13, color: CORES.cinza900},
   histDetalhe: {fontSize: 12.5, color: CORES.cinza700, marginTop: 1},

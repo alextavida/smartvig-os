@@ -86,6 +86,10 @@ export async function atribuirTecnicos(
   await apiPost('/os/atribuir_tecnicos.php', {os_id: osId, tecnicos});
 }
 
+export async function salvarTempo(osId: number, segundos: number): Promise<void> {
+  await apiPost('/os/salvar_tempo.php', {os_id: osId, segundos});
+}
+
 export async function buscarProdutosGC(busca: string): Promise<ProdutoGC[]> {
   const qs = busca ? `?busca=${encodeURIComponent(busca)}` : '';
   const resultado = await apiGet<{produtos: any[]}>(`/produtos/listar.php${qs}`);

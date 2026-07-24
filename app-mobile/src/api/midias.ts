@@ -1,4 +1,4 @@
-import {apiUpload} from './client';
+import {apiUpload, apiPost} from './client';
 import {API_BASE_URL} from '../config';
 
 export async function uploadMidia(
@@ -20,6 +20,16 @@ export async function uploadFotoPerfil(
   fd.append('arquivo', arquivo as any);
   const dados = await apiUpload<{url: string}>('/tecnicos/upload_foto.php', fd);
   return dados.url;
+}
+
+/** Envia imagem em base64 (ex: assinatura digital) como mídia da OS */
+export async function uploadBase64Midia(
+  osId: number,
+  tipo: 'foto' | 'video',
+  base64: string,
+  nomeArquivo: string = 'assinatura.png',
+): Promise<void> {
+  await apiPost('/midias/upload_base64.php', {os_id: osId, tipo, base64, nome_arquivo: nomeArquivo});
 }
 
 /** Constrói URL pública de mídia a partir do caminho relativo */

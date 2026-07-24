@@ -35,9 +35,21 @@ $tecnicosAtribuidos = $tecnicosAtribuidos->fetchAll();
 
 $produtos = $os['produtos_json'] ? json_decode($os['produtos_json'], true) : [];
 
-$midias = $pdo->prepare('SELECT tipo, caminho_arquivo FROM midias_os WHERE os_id = :id AND tipo = "foto" ORDER BY criado_em DESC');
+$midias = $pdo->prepare(
+    'SELECT tipo, caminho_arquivo, nome_arquivo FROM midias_os
+     WHERE os_id = :id AND tipo = "foto" ORDER BY criado_em DESC'
+);
 $midias->execute(['id' => $osId]);
-$fotos = $midias->fetchAll();
+$todasFotos = $midias->fetchAll();
+// Separar assinaturas digitais das fotos de trabalho
+$fotos       = array_filter($todasFotos, fn($f) => !str_contains($f['nome_arquivo'], 'assinatura'));
+$assinaturas = array_filter($todasFotos, fn($f) =>  str_contains($f['nome_arquivo'], 'assinatura'));
+
+function formatSegundos(int $seg): string {
+    $h = intdiv($seg, 3600);
+    $m = intdiv($seg % 3600, 60);
+    return $h > 0 ? "{$h}h {$m}min" : "{$m}min";
+}
 
 $historico = $pdo->prepare(
     'SELECT h.acao, h.detalhe, h.criado_em, u.nome AS usuario_nome
@@ -146,6 +158,21 @@ tfoot td { font-weight: 700; }
   <?php if ($os['data_conclusao']): ?>
   <div class="linha"><span class="campo-label">Concluido em</span><span class="campo-val"><?= date('d/m/Y H:i', strtotime($os['data_conclusao'])) ?></span></div>
   <?php endif; ?>
+  <?php if (!empty($os['data_prazo'])): ?>
+  <?php $prazoVencido = strtotime($os['data_prazo']) < time() && $os['situacao_local'] !== 'concluido'; ?>
+  <div class="linha">
+    <span class="campo-label">Prazo (SLA)</span>
+    <span class="campo-val" style="<?= $prazoVencido ? 'color:#c62f2f;font-weight:700;' : '' ?>">
+      <?= date('d/m/Y', strtotime($os['data_prazo'])) ?><?= $prazoVencido ? ' ⚠ VENCIDO' : '' ?>
+    </span>
+  </div>
+  <?php endif; ?>
+  <?php if (!empty($os['tempo_atendimento_segundos'])): ?>
+  <div class="linha">
+    <span class="campo-label">Tempo total</span>
+    <span class="campo-val">⏱ <?= formatSegundos((int) $os['tempo_atendimento_segundos']) ?></span>
+  </div>
+  <?php endif; ?>
 </div>
 
 <!-- Tecnicos -->
@@ -229,7 +256,19 @@ tfoot td { font-weight: 700; }
 </div>
 <?php endif; ?>
 
-<!-- Assinatura -->
+<!-- Assinatura Digital (se coletada no app) -->
+<?php if (!empty($assinaturas)): ?>
+<div class="secao">
+  <h3>Assinatura Digital do Cliente</h3>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;">
+    <?php foreach ($assinaturas as $a): ?>
+      <img src="/app-tecnicos/<?= htmlspecialchars($a['caminho_arquivo']) ?>"
+           alt="Assinatura" style="max-height:100px;border:1px solid #ddd;border-radius:6px;background:#f8fafd;">
+    <?php endforeach; ?>
+  </div>
+</div>
+<?php else: ?>
+<!-- Espaço para assinatura manual (quando não coletada digitalmente) -->
 <div class="secao" style="margin-top:28px;">
   <h3>Assinatura e confirmacao</h3>
   <div style="display:flex; gap:40px; margin-top:16px;">
@@ -237,6 +276,7 @@ tfoot td { font-weight: 700; }
     <div style="flex:1; border-top:1px solid #555; padding-top:6px; text-align:center; font-size:11px; color:#6b7789;">Assinatura do cliente</div>
   </div>
 </div>
+<?php endif; ?>
 
 <div class="rodape">
   <span>SmartVig — Vigilancia Inteligente 24h</span>

@@ -145,6 +145,15 @@ function rotuloStatus(string $s): string
   <?php endif; ?>
 </div>
 
+<!-- Dashboard GC: situações ao vivo -->
+<div class="card" id="card-gc-situacoes" style="margin-bottom:16px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+    <h3 style="margin:0;font-size:1rem;">Situações no GestãoClick</h3>
+    <span id="gc-sit-status" style="font-size:12px;color:#64748b;">Carregando...</span>
+  </div>
+  <div id="gc-sit-grid" style="display:flex;flex-wrap:wrap;gap:8px;min-height:40px;"></div>
+</div>
+
 <script>
 async function sincronizarGC(silencioso) {
   const btn = document.getElementById('btn-sync-gc');
@@ -184,10 +193,56 @@ async function sincronizarGC(silencioso) {
   }
 }
 
+async function carregarSituacoesGC() {
+  const grid   = document.getElementById('gc-sit-grid');
+  const status = document.getElementById('gc-sit-status');
+  try {
+    const r = await fetch('/app-tecnicos/api/os/situacoes-gc.php', {
+      headers: {'Authorization': 'Bearer ' + (window.APP_JWT || '')},
+    });
+    const d = await r.json();
+    if (!d.sucesso) { throw new Error(d.erro || 'Erro'); }
+
+    const sits    = d.dados.gc_situacoes   || [];
+    const locais  = d.dados.contagens_local || {};
+    const totalGC = d.dados.total_sincronizado || 0;
+
+    status.textContent = `${totalGC} OS sincronizadas com GC`;
+    status.style.color = '#16803c';
+
+    if (sits.length === 0) {
+      grid.innerHTML = '<span style="font-size:13px;color:#64748b;">Situações GC não disponíveis no momento.</span>';
+    } else {
+      grid.innerHTML = sits.map(s => `
+        <div style="background:#f4f9fe;border:1px solid #e8f1fc;border-radius:8px;padding:10px 14px;min-width:130px;text-align:center;">
+          <div style="font-size:11px;color:#6b7789;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">${s.nome}</div>
+          <div style="font-size:20px;font-weight:800;color:#1462b0;">${s.id || '—'}</div>
+        </div>`).join('');
+    }
+
+    // Cards de totais locais por situacao
+    const rotulosLocais = {aberto:'Abertas',em_andamento:'Em andamento',pausado:'Pausadas',reagendado:'Reagendadas',concluido:'Concluídas',cancelado:'Canceladas'};
+    const cores = {aberto:'#1462b0',em_andamento:'#b8860b',pausado:'#5a6472',reagendado:'#c8641a',concluido:'#1e8e5a',cancelado:'#c62f2f'};
+    const localCards = Object.entries(locais).map(([k,v]) => `
+      <div style="background:#fff;border:2px solid ${cores[k]||'#e2e8f0'};border-radius:8px;padding:10px 14px;min-width:120px;text-align:center;">
+        <div style="font-size:10px;color:${cores[k]||'#64748b'};font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">${rotulosLocais[k]||k}</div>
+        <div style="font-size:22px;font-weight:800;color:${cores[k]||'#1c2430'};">${v}</div>
+      </div>`).join('');
+    if (localCards) {
+      grid.insertAdjacentHTML('beforeend', '<div style="width:100%;height:1px;background:#eef1f5;margin:10px 0;"></div>' + localCards);
+    }
+
+  } catch (e) {
+    status.textContent = '✕ Não foi possível carregar situações GC';
+    status.style.color = '#c62f2f';
+    grid.innerHTML = '';
+  }
+}
+
 // Auto-sync silencioso ao carregar a página
-window.addEventListener('DOMContentLoaded', () => sincronizarGC(true));
+window.addEventListener('DOMContentLoaded', () => { sincronizarGC(true); carregarSituacoesGC(); });
 // Auto-refresh a cada 5 minutos
-setInterval(() => sincronizarGC(true), 5 * 60 * 1000);
+setInterval(() => { sincronizarGC(true); carregarSituacoesGC(); }, 5 * 60 * 1000);
 </script>
 <style>
 @keyframes spin { from {transform:rotate(0deg)} to {transform:rotate(360deg)} }
