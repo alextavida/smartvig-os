@@ -23,8 +23,15 @@ export function AuthProvider({children}: {children: ReactNode}) {
     setUsuario(null);
   }
 
+  async function atualizarUsuario(parcial: Partial<Usuario>) {
+    if (!usuario) {return;}
+    const atualizado = {...usuario, ...parcial};
+    await salvarSessao(atualizado);
+    setUsuario(atualizado);
+  }
+
   return (
-    <AuthContext.Provider value={{usuario, carregando, fazerLogin, fazerLogout}}>
+    <AuthContext.Provider value={{usuario, carregando, fazerLogin, fazerLogout, atualizarUsuario}}>
       {children}
     </AuthContext.Provider>
   );

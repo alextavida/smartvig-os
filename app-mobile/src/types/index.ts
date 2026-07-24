@@ -75,3 +75,26 @@ export interface Notificacao {
   lida: boolean;
   criado_em: string;
 }
+
+export interface TecnicoLista {
+  id: number;
+  nome: string;
+  email: string;
+  telefone: string | null;
+  ativo: boolean | number;
+  os_ativas: number;
+}
+
+export interface ClienteGC {
+  id: number | null;
+  nome: string;
+  telefone: string;
+  email: string;
+  endereco: string;
+}
+
+export interface ProdutoGC {
+  id: number;
+  nome: string;
+  valor_venda: number;
+}

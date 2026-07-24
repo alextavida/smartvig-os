@@ -1,5 +1,5 @@
 import {apiGet, apiPost} from './client';
-import {OS, OSDetalhe} from '../types';
+import {OS, OSDetalhe, ProdutoGC} from '../types';
 
 interface ListarOsParams {
   status?: string;
@@ -62,4 +62,36 @@ export async function adicionarProduto(
   produto: {produto_id?: number; nome: string; quantidade: number; valor_venda: number},
 ): Promise<void> {
   await apiPost('/produtos/adicionar_os.php', {os_id: osId, ...produto});
+}
+
+export interface CriarOsDados {
+  cliente_nome: string;
+  cliente_endereco?: string;
+  cliente_telefone?: string;
+  gc_cliente_id?: number | null;
+  data_agendamento: string;
+  observacoes?: string;
+  prioridade: 'baixo' | 'intermediario' | 'urgente';
+  tecnicos: {tecnico_id: number; responsavel: boolean}[];
+}
+
+export async function criarOs(dados: CriarOsDados): Promise<{os_id: number; gc_os_id: number; sincronizado_gc: boolean}> {
+  return apiPost('/os/criar.php', dados);
+}
+
+export async function atribuirTecnicos(
+  osId: number,
+  tecnicos: {tecnico_id: number; responsavel: boolean}[],
+): Promise<void> {
+  await apiPost('/os/atribuir_tecnicos.php', {os_id: osId, tecnicos});
+}
+
+export async function buscarProdutosGC(busca: string): Promise<ProdutoGC[]> {
+  const qs = busca ? `?busca=${encodeURIComponent(busca)}` : '';
+  const resultado = await apiGet<{produtos: any[]}>(`/produtos/listar.php${qs}`);
+  return (resultado.produtos ?? []).slice(0, 20).map((p: any) => ({
+    id: p.id ?? 0,
+    nome: p.nome ?? p.descricao ?? '',
+    valor_venda: parseFloat(p.preco_venda ?? p.valor_venda ?? p.preco ?? '0') || 0,
+  }));
 }

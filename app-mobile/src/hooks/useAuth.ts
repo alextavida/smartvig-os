@@ -6,6 +6,7 @@ export interface AuthContextType {
   carregando: boolean;
   fazerLogin: (usuario: Usuario) => Promise<void>;
   fazerLogout: () => Promise<void>;
+  atualizarUsuario: (parcial: Partial<Usuario>) => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType>({
@@ -13,6 +14,7 @@ export const AuthContext = createContext<AuthContextType>({
   carregando: true,
   fazerLogin: async () => {},
   fazerLogout: async () => {},
+  atualizarUsuario: async () => {},
 });
 
 export function useAuth(): AuthContextType {

@@ -17,10 +17,14 @@ import {NativeStackScreenProps} from '@react-navigation/native-stack';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Geolocation from '@react-native-community/geolocation';
 import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
-import {visualizarOs, iniciarOs, pausarOs, reagendarOs, encerrarOs, salvarDescricao, adicionarProduto} from '../api/os';
+import {
+  visualizarOs, iniciarOs, pausarOs, reagendarOs, encerrarOs,
+  salvarDescricao, adicionarProduto, atribuirTecnicos, buscarProdutosGC,
+} from '../api/os';
+import {listarTecnicos} from '../api/tecnicos';
 import {atualizarGps} from '../api/gps';
 import {uploadMidia} from '../api/midias';
-import {OSDetalhe} from '../types';
+import {OSDetalhe, TecnicoLista, ProdutoGC} from '../types';
 import {StatusBadge} from '../components/StatusBadge';
 import {PriorityBadge} from '../components/PriorityBadge';
 import {useAuth} from '../hooks/useAuth';
@@ -34,7 +38,7 @@ const ROTULOS_ACAO: Record<string, string> = {
   os_reagendada: 'OS reagendada', os_encerrada: 'OS encerrada',
   os_atualizada: 'OS atualizada', tecnicos_atribuidos: 'Técnicos redefinidos',
   midia_enviada: 'Mídia enviada', produto_adicionado: 'Produto adicionado',
-  descricao_atualizada: 'Descrição atualizada',
+  descricao_atualizada: 'Descrição atualizada', falha_sincronizacao_gc: 'Falha de sincronização GC',
 };
 
 export function OsDetailScreen({route, navigation}: Props) {
@@ -53,6 +57,7 @@ export function OsDetailScreen({route, navigation}: Props) {
   const [modalEncerrar, setModalEncerrar] = useState(false);
   const [modalProduto, setModalProduto] = useState(false);
   const [modalHistorico, setModalHistorico] = useState(false);
+  const [modalTecnicos, setModalTecnicos] = useState(false);
 
   // Campos dos modais
   const [motivoPausa, setMotivoPausa] = useState('');
@@ -61,11 +66,21 @@ export function OsDetailScreen({route, navigation}: Props) {
   const [motivoReagendar, setMotivoReagendar] = useState('');
   const [laudoFinal, setLaudoFinal] = useState('');
   const [descricao, setDescricao] = useState('');
+
+  // Modal produto com busca GC
+  const [prodBusca, setProdBusca] = useState('');
+  const [prodSugestoes, setProdSugestoes] = useState<ProdutoGC[]>([]);
+  const [buscandoProd, setBuscandoProd] = useState(false);
   const [prodNome, setProdNome] = useState('');
   const [prodQtd, setProdQtd] = useState('1');
   const [prodValor, setProdValor] = useState('');
 
-  // GPS
+  // Modal técnicos (gestor)
+  const [todosTecnicos, setTodosTecnicos] = useState<TecnicoLista[]>([]);
+  const [tecnicosSel, setTecnicosSel] = useState<number[]>([]);
+  const [tecnicoResp, setTecnicoResp] = useState<number | null>(null);
+  const [carregandoTec, setCarregandoTec] = useState(false);
+
   const gpsTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const carregar = useCallback(async () => {
@@ -84,7 +99,6 @@ export function OsDetailScreen({route, navigation}: Props) {
     carregar();
   }, [carregar]);
 
-  // GPS automático quando em andamento (apenas para técnicos em campo)
   useEffect(() => {
     if (isGestor || os?.situacao_local !== 'em_andamento') {
       if (gpsTimer.current) {clearInterval(gpsTimer.current);}
@@ -106,7 +120,24 @@ export function OsDetailScreen({route, navigation}: Props) {
     return () => {
       if (gpsTimer.current) {clearInterval(gpsTimer.current);}
     };
-  }, [os?.situacao_local, osId]);
+  }, [os?.situacao_local, osId, isGestor]);
+
+  // Busca produtos GC com debounce
+  useEffect(() => {
+    if (!modalProduto || prodBusca.length < 2) {setProdSugestoes([]); return;}
+    const t = setTimeout(async () => {
+      setBuscandoProd(true);
+      try {
+        const lista = await buscarProdutosGC(prodBusca);
+        setProdSugestoes(lista);
+      } catch {
+        setProdSugestoes([]);
+      } finally {
+        setBuscandoProd(false);
+      }
+    }, 400);
+    return () => clearTimeout(t);
+  }, [prodBusca, modalProduto]);
 
   function mostrarSucesso(msg: string) {
     setSucesso(msg);
@@ -141,28 +172,25 @@ export function OsDetailScreen({route, navigation}: Props) {
 
   async function enviarMidia(fonte: 'camera' | 'galeria') {
     const fn = fonte === 'camera' ? launchCamera : launchImageLibrary;
-    fn(
-      {mediaType: 'mixed', quality: 0.8, includeBase64: false},
-      async response => {
-        if (response.didCancel || !response.assets?.[0]) {return;}
-        const asset = response.assets[0];
-        const tipo = asset.type?.startsWith('video') ? 'video' : 'foto';
-        setSalvando(true);
-        try {
-          await uploadMidia(osId, tipo, {
-            uri: asset.uri!,
-            name: asset.fileName ?? `midia.${tipo === 'foto' ? 'jpg' : 'mp4'}`,
-            type: asset.type ?? 'image/jpeg',
-          });
-          mostrarSucesso('Mídia enviada com sucesso!');
-          await carregar();
-        } catch (e: any) {
-          mostrarErro(e.message ?? 'Erro ao enviar mídia.');
-        } finally {
-          setSalvando(false);
-        }
-      },
-    );
+    fn({mediaType: 'mixed', quality: 0.8, includeBase64: false}, async response => {
+      if (response.didCancel || !response.assets?.[0]) {return;}
+      const asset = response.assets[0];
+      const tipo = asset.type?.startsWith('video') ? 'video' : 'foto';
+      setSalvando(true);
+      try {
+        await uploadMidia(osId, tipo, {
+          uri: asset.uri!,
+          name: asset.fileName ?? `midia.${tipo === 'foto' ? 'jpg' : 'mp4'}`,
+          type: asset.type ?? 'image/jpeg',
+        });
+        mostrarSucesso('Mídia enviada com sucesso!');
+        await carregar();
+      } catch (e: any) {
+        mostrarErro(e.message ?? 'Erro ao enviar mídia.');
+      } finally {
+        setSalvando(false);
+      }
+    });
   }
 
   function escolherMidia() {
@@ -171,6 +199,44 @@ export function OsDetailScreen({route, navigation}: Props) {
       {text: 'Galeria', onPress: () => enviarMidia('galeria')},
       {text: 'Cancelar', style: 'cancel'},
     ]);
+  }
+
+  async function abrirModalTecnicos() {
+    setModalTecnicos(true);
+    setCarregandoTec(true);
+    try {
+      const lista = await listarTecnicos();
+      setTodosTecnicos(lista);
+      const idsAtuais = (os?.tecnicos ?? []).map(t => t.id);
+      setTecnicosSel(idsAtuais);
+      const resp = (os?.tecnicos ?? []).find(t => t.responsavel);
+      setTecnicoResp(resp?.id ?? idsAtuais[0] ?? null);
+    } catch {
+      Alert.alert('Erro', 'Não foi possível carregar técnicos.');
+      setModalTecnicos(false);
+    } finally {
+      setCarregandoTec(false);
+    }
+  }
+
+  function toggleTecnicoModal(id: number) {
+    setTecnicosSel(prev => {
+      if (prev.includes(id)) {
+        const novo = prev.filter(t => t !== id);
+        if (tecnicoResp === id) {setTecnicoResp(novo[0] ?? null);}
+        return novo;
+      }
+      const novo = [...prev, id];
+      if (!tecnicoResp) {setTecnicoResp(id);}
+      return novo;
+    });
+  }
+
+  function selecionarProdutoGC(p: ProdutoGC) {
+    setProdNome(p.nome);
+    setProdValor(String(p.valor_venda));
+    setProdBusca('');
+    setProdSugestoes([]);
   }
 
   if (carregando) {
@@ -192,10 +258,7 @@ export function OsDetailScreen({route, navigation}: Props) {
 
   const situacao = os.situacao_local;
   const produtos = os.produtos ?? [];
-  const totalProdutos = produtos.reduce(
-    (acc, p) => acc + p.valor_venda * p.quantidade, 0,
-  );
-
+  const totalProdutos = produtos.reduce((acc, p) => acc + p.valor_venda * p.quantidade, 0);
   const dataFormatada = os.data_agendamento
     ? new Date(os.data_agendamento + 'T12:00:00').toLocaleDateString('pt-BR')
     : 'Sem data';
@@ -204,7 +267,6 @@ export function OsDetailScreen({route, navigation}: Props) {
     <>
       <ScrollView style={estilos.container} contentContainerStyle={estilos.scroll}>
 
-        {/* Alertas */}
         {sucesso ? (
           <View style={estilos.alertaSucesso}>
             <Text style={estilos.alertaSucessoText}>✓ {sucesso}</Text>
@@ -231,9 +293,7 @@ export function OsDetailScreen({route, navigation}: Props) {
           {os.cliente_endereco ? (
             <TouchableOpacity style={estilos.infoRow} onPress={abrirRota}>
               <Text style={estilos.infoIcon}>📍</Text>
-              <Text style={[estilos.infoText, {color: CORES.azul700}]}>
-                {os.cliente_endereco}
-              </Text>
+              <Text style={[estilos.infoText, {color: CORES.azul700}]}>{os.cliente_endereco}</Text>
             </TouchableOpacity>
           ) : null}
 
@@ -242,9 +302,7 @@ export function OsDetailScreen({route, navigation}: Props) {
               style={estilos.infoRow}
               onPress={() => Linking.openURL(`tel:${os.cliente_telefone}`)}>
               <Text style={estilos.infoIcon}>📞</Text>
-              <Text style={[estilos.infoText, {color: CORES.azul700}]}>
-                {os.cliente_telefone}
-              </Text>
+              <Text style={[estilos.infoText, {color: CORES.azul700}]}>{os.cliente_telefone}</Text>
             </TouchableOpacity>
           ) : null}
 
@@ -253,7 +311,6 @@ export function OsDetailScreen({route, navigation}: Props) {
             <Text style={estilos.infoText}>{dataFormatada}</Text>
           </View>
 
-          {/* Botão Rota */}
           {os.cliente_endereco ? (
             <TouchableOpacity style={estilos.botaoRota} onPress={abrirRota}>
               <Text style={estilos.botaoRotaText}>🗺 Abrir rota no Google Maps</Text>
@@ -266,7 +323,7 @@ export function OsDetailScreen({route, navigation}: Props) {
           <Text style={estilos.secaoTitulo}>Ações</Text>
           <View style={estilos.acoesGrid}>
 
-            {['aberto', 'reagendado', 'pausado'].includes(situacao) && (
+            {['aberto', 'reagendado', 'pausado'].includes(situacao) && !isGestor && (
               <TouchableOpacity
                 style={[estilos.botaoAcao, estilos.botaoPrimario]}
                 disabled={salvando}
@@ -275,7 +332,7 @@ export function OsDetailScreen({route, navigation}: Props) {
               </TouchableOpacity>
             )}
 
-            {situacao === 'em_andamento' && (
+            {situacao === 'em_andamento' && !isGestor && (
               <>
                 <TouchableOpacity
                   style={[estilos.botaoAcao, estilos.botaoNeutro]}
@@ -297,7 +354,7 @@ export function OsDetailScreen({route, navigation}: Props) {
               </>
             )}
 
-            {['aberto', 'pausado'].includes(situacao) && (
+            {['aberto', 'pausado'].includes(situacao) && !isGestor && (
               <TouchableOpacity
                 style={[estilos.botaoAcao, estilos.botaoNeutro]}
                 onPress={() => setModalReagendar(true)}>
@@ -305,9 +362,31 @@ export function OsDetailScreen({route, navigation}: Props) {
               </TouchableOpacity>
             )}
 
+            {/* Ações exclusivas do gestor */}
+            {isGestor && (
+              <>
+                <TouchableOpacity
+                  style={[estilos.botaoAcao, estilos.botaoGestor]}
+                  onPress={abrirModalTecnicos}>
+                  <Text style={[estilos.botaoAcaoText, {color: CORES.azul800}]}>👥 Técnicos</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[estilos.botaoAcao, estilos.botaoNeutro]}
+                  onPress={() => setModalReagendar(true)}>
+                  <Text style={[estilos.botaoAcaoText, {color: CORES.cinza700}]}>📅 Reagendar</Text>
+                </TouchableOpacity>
+                {situacao !== 'concluido' && situacao !== 'cancelado' && (
+                  <TouchableOpacity
+                    style={[estilos.botaoAcao, estilos.botaoSucesso]}
+                    onPress={() => setModalEncerrar(true)}>
+                    <Text style={[estilos.botaoAcaoText, {color: CORES.verde}]}>✓ Encerrar</Text>
+                  </TouchableOpacity>
+                )}
+              </>
+            )}
           </View>
 
-          {situacao === 'em_andamento' && (
+          {situacao === 'em_andamento' && !isGestor && (
             <View style={estilos.gpsIndicador}>
               <View style={estilos.gpsDot} />
               <Text style={estilos.gpsText}>GPS ativo — enviando posição a cada 60s</Text>
@@ -385,12 +464,7 @@ export function OsDetailScreen({route, navigation}: Props) {
               {os.midias.map((m, i) => {
                 const uri = `${API_BASE_URL.replace('/api', '')}/${m.caminho_arquivo}`;
                 return m.tipo === 'foto' ? (
-                  <Image
-                    key={i}
-                    source={{uri}}
-                    style={estilos.miniaturaFoto}
-                    resizeMode="cover"
-                  />
+                  <Image key={i} source={{uri}} style={estilos.miniaturaFoto} resizeMode="cover" />
                 ) : (
                   <View key={i} style={[estilos.miniaturaFoto, estilos.miniaturaVideo]}>
                     <Text style={{color: '#fff', fontSize: 28}}>▶</Text>
@@ -406,7 +480,14 @@ export function OsDetailScreen({route, navigation}: Props) {
         {/* Técnicos */}
         {os.tecnicos.length > 0 && (
           <View style={estilos.card}>
-            <Text style={estilos.secaoTitulo}>Técnicos atribuídos</Text>
+            <View style={estilos.secaoHeader}>
+              <Text style={estilos.secaoTitulo}>Técnicos atribuídos</Text>
+              {isGestor && (
+                <TouchableOpacity onPress={abrirModalTecnicos}>
+                  <Text style={{color: CORES.azul700, fontSize: 13, fontWeight: '600'}}>Editar</Text>
+                </TouchableOpacity>
+              )}
+            </View>
             {os.tecnicos.map(t => (
               <View key={t.id} style={estilos.tecnicoRow}>
                 <View style={estilos.tecnicoAvatar}>
@@ -416,9 +497,7 @@ export function OsDetailScreen({route, navigation}: Props) {
                 </View>
                 <View>
                   <Text style={estilos.tecnicoNome}>{t.nome}</Text>
-                  {t.responsavel && (
-                    <Text style={estilos.tecnicoResp}>Responsável</Text>
-                  )}
+                  {t.responsavel && <Text style={estilos.tecnicoResp}>Responsável</Text>}
                 </View>
               </View>
             ))}
@@ -479,8 +558,7 @@ export function OsDetailScreen({route, navigation}: Props) {
                 onPress={() => {
                   if (!motivoPausa.trim()) {Alert.alert('Informe o motivo da pausa.'); return;}
                   acao(() => pausarOs(osId, motivoPausa), 'OS pausada.').then(() => {
-                    setModalPausar(false);
-                    setMotivoPausa('');
+                    setModalPausar(false); setMotivoPausa('');
                   });
                 }}>
                 <Text style={{color: '#fff', fontWeight: '600'}}>
@@ -501,9 +579,7 @@ export function OsDetailScreen({route, navigation}: Props) {
             <TouchableOpacity
               style={estilos.dateInput}
               onPress={() => setMostrarDatePicker(true)}>
-              <Text style={{color: CORES.cinza900}}>
-                {novaData.toLocaleDateString('pt-BR')}
-              </Text>
+              <Text style={{color: CORES.cinza900}}>{novaData.toLocaleDateString('pt-BR')}</Text>
             </TouchableOpacity>
 
             {mostrarDatePicker && (
@@ -534,10 +610,9 @@ export function OsDetailScreen({route, navigation}: Props) {
                 disabled={salvando}
                 onPress={() => {
                   const dataStr = novaData.toISOString().split('T')[0];
-                  acao(
-                    () => reagendarOs(osId, dataStr, motivoReagendar),
-                    'OS reagendada.',
-                  ).then(() => {setModalReagendar(false); setMotivoReagendar('');});
+                  acao(() => reagendarOs(osId, dataStr, motivoReagendar), 'OS reagendada.').then(() => {
+                    setModalReagendar(false); setMotivoReagendar('');
+                  });
                 }}>
                 <Text style={{color: '#fff', fontWeight: '600'}}>
                   {salvando ? '...' : '📅 Confirmar'}
@@ -574,10 +649,9 @@ export function OsDetailScreen({route, navigation}: Props) {
                 disabled={salvando}
                 onPress={() => {
                   if (!laudoFinal.trim()) {Alert.alert('Informe o laudo final.'); return;}
-                  acao(
-                    () => encerrarOs(osId, laudoFinal),
-                    'OS encerrada com sucesso!',
-                  ).then(() => {setModalEncerrar(false); setLaudoFinal('');});
+                  acao(() => encerrarOs(osId, laudoFinal), 'OS encerrada com sucesso!').then(() => {
+                    setModalEncerrar(false); setLaudoFinal('');
+                  });
                 }}>
                 <Text style={{color: '#fff', fontWeight: '600'}}>
                   {salvando ? '...' : '✓ Encerrar'}
@@ -588,70 +662,172 @@ export function OsDetailScreen({route, navigation}: Props) {
         </View>
       </Modal>
 
-      {/* Modal Produto */}
+      {/* Modal Produto com busca GC */}
       <Modal visible={modalProduto} transparent animationType="slide">
         <View style={estilos.modalOverlay}>
-          <View style={estilos.modalBox}>
-            <Text style={estilos.modalTitulo}>Adicionar produto</Text>
-            <Text style={estilos.modalLabel}>Nome do produto *</Text>
-            <TextInput
-              style={[estilos.input, {marginBottom: 12}]}
-              value={prodNome}
-              onChangeText={setProdNome}
-              placeholder="Nome do produto"
-              placeholderTextColor={CORES.cinza300}
-            />
-            <View style={{flexDirection: 'row', gap: 10}}>
-              <View style={{flex: 1}}>
-                <Text style={estilos.modalLabel}>Quantidade *</Text>
+          <ScrollView keyboardShouldPersistTaps="handled">
+            <View style={estilos.modalBox}>
+              <Text style={estilos.modalTitulo}>Adicionar produto</Text>
+
+              <Text style={estilos.modalLabel}>Buscar no GestãoClick</Text>
+              <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 4}}>
                 <TextInput
-                  style={[estilos.input, {marginBottom: 12}]}
-                  value={prodQtd}
-                  onChangeText={setProdQtd}
-                  keyboardType="decimal-pad"
-                  placeholder="1"
+                  style={[estilos.input, {flex: 1, marginBottom: 0}]}
+                  value={prodBusca}
+                  onChangeText={setProdBusca}
+                  placeholder="Nome do produto..."
                   placeholderTextColor={CORES.cinza300}
                 />
+                {buscandoProd && <ActivityIndicator size="small" color={CORES.azul600} style={{marginLeft: 8}} />}
               </View>
-              <View style={{flex: 1}}>
-                <Text style={estilos.modalLabel}>Valor unit. *</Text>
-                <TextInput
-                  style={[estilos.input, {marginBottom: 12}]}
-                  value={prodValor}
-                  onChangeText={setProdValor}
-                  keyboardType="decimal-pad"
-                  placeholder="0,00"
-                  placeholderTextColor={CORES.cinza300}
-                />
+
+              {prodSugestoes.length > 0 && (
+                <View style={estilos.sugestoesProd}>
+                  {prodSugestoes.map((p, i) => (
+                    <TouchableOpacity
+                      key={i}
+                      style={estilos.sugestaoProdItem}
+                      onPress={() => selecionarProdutoGC(p)}>
+                      <Text style={estilos.sugestaoProdNome}>{p.nome}</Text>
+                      {p.valor_venda > 0 && (
+                        <Text style={estilos.sugestaoProdValor}>
+                          R$ {p.valor_venda.toFixed(2).replace('.', ',')}
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+
+              <Text style={[estilos.modalLabel, {marginTop: 12}]}>Nome do produto *</Text>
+              <TextInput
+                style={[estilos.input, {marginBottom: 12}]}
+                value={prodNome}
+                onChangeText={setProdNome}
+                placeholder="Nome do produto"
+                placeholderTextColor={CORES.cinza300}
+              />
+              <View style={{flexDirection: 'row', gap: 10}}>
+                <View style={{flex: 1}}>
+                  <Text style={estilos.modalLabel}>Quantidade *</Text>
+                  <TextInput
+                    style={[estilos.input, {marginBottom: 12}]}
+                    value={prodQtd}
+                    onChangeText={setProdQtd}
+                    keyboardType="decimal-pad"
+                    placeholder="1"
+                    placeholderTextColor={CORES.cinza300}
+                  />
+                </View>
+                <View style={{flex: 1}}>
+                  <Text style={estilos.modalLabel}>Valor unit. *</Text>
+                  <TextInput
+                    style={[estilos.input, {marginBottom: 12}]}
+                    value={prodValor}
+                    onChangeText={setProdValor}
+                    keyboardType="decimal-pad"
+                    placeholder="0,00"
+                    placeholderTextColor={CORES.cinza300}
+                  />
+                </View>
+              </View>
+              <View style={estilos.modalBotoes}>
+                <TouchableOpacity
+                  style={[estilos.botaoModal, {backgroundColor: CORES.cinza100}]}
+                  onPress={() => {
+                    setModalProduto(false);
+                    setProdNome(''); setProdQtd('1'); setProdValor(''); setProdBusca(''); setProdSugestoes([]);
+                  }}>
+                  <Text style={{color: CORES.cinza700, fontWeight: '600'}}>Cancelar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[estilos.botaoModal, {backgroundColor: CORES.azul700}]}
+                  disabled={salvando}
+                  onPress={() => {
+                    const nome = prodNome.trim();
+                    const quantidade = parseFloat(prodQtd.replace(',', '.'));
+                    const valor_venda = parseFloat(prodValor.replace(',', '.'));
+                    if (!nome || isNaN(quantidade) || isNaN(valor_venda)) {
+                      Alert.alert('Preencha nome, quantidade e valor.');
+                      return;
+                    }
+                    acao(
+                      () => adicionarProduto(osId, {nome, quantidade, valor_venda}),
+                      'Produto adicionado!',
+                    ).then(() => {
+                      setModalProduto(false);
+                      setProdNome(''); setProdQtd('1'); setProdValor(''); setProdBusca(''); setProdSugestoes([]);
+                    });
+                  }}>
+                  <Text style={{color: '#fff', fontWeight: '600'}}>
+                    {salvando ? '...' : '+ Adicionar'}
+                  </Text>
+                </TouchableOpacity>
               </View>
             </View>
-            <View style={estilos.modalBotoes}>
+          </ScrollView>
+        </View>
+      </Modal>
+
+      {/* Modal Atribuir Técnicos (gestor) */}
+      <Modal visible={modalTecnicos} transparent animationType="slide">
+        <View style={estilos.modalOverlay}>
+          <View style={[estilos.modalBox, {maxHeight: '80%'}]}>
+            <Text style={estilos.modalTitulo}>Atribuir Técnicos</Text>
+            {carregandoTec ? (
+              <ActivityIndicator size="large" color={CORES.azul600} style={{marginVertical: 24}} />
+            ) : (
+              <ScrollView style={{maxHeight: 360}}>
+                {todosTecnicos.map(t => {
+                  const sel = tecnicosSel.includes(t.id);
+                  const isResp = tecnicoResp === t.id;
+                  return (
+                    <TouchableOpacity
+                      key={t.id}
+                      style={[estilos.tecnicoItemModal, sel && estilos.tecnicoItemModalSel]}
+                      onPress={() => toggleTecnicoModal(t.id)}>
+                      <View style={[estilos.tecnicoCheck, sel && estilos.tecnicoCheckSel]}>
+                        {sel && <Text style={{color: '#fff', fontSize: 11, fontWeight: '800'}}>✓</Text>}
+                      </View>
+                      <View style={{flex: 1}}>
+                        <Text style={[estilos.tecnicoNome, sel && {color: CORES.azul800}]}>{t.nome}</Text>
+                        <Text style={estilos.tecnicoInfo}>{t.os_ativas} OS ativa(s)</Text>
+                      </View>
+                      {sel && (
+                        <TouchableOpacity
+                          style={[estilos.respBadge, isResp && estilos.respBadgeSel]}
+                          onPress={() => setTecnicoResp(t.id)}>
+                          <Text style={[estilos.respBadgeText, isResp && {color: '#fff'}]}>
+                            {isResp ? 'Resp. ✓' : 'Resp.'}
+                          </Text>
+                        </TouchableOpacity>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            )}
+            <View style={[estilos.modalBotoes, {marginTop: 16}]}>
               <TouchableOpacity
                 style={[estilos.botaoModal, {backgroundColor: CORES.cinza100}]}
-                onPress={() => {setModalProduto(false); setProdNome(''); setProdQtd('1'); setProdValor('');}}>
+                onPress={() => setModalTecnicos(false)}>
                 <Text style={{color: CORES.cinza700, fontWeight: '600'}}>Cancelar</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[estilos.botaoModal, {backgroundColor: CORES.azul700}]}
-                disabled={salvando}
+                disabled={salvando || tecnicosSel.length === 0}
                 onPress={() => {
-                  const nome = prodNome.trim();
-                  const quantidade = parseFloat(prodQtd.replace(',', '.'));
-                  const valor_venda = parseFloat(prodValor.replace(',', '.'));
-                  if (!nome || isNaN(quantidade) || isNaN(valor_venda)) {
-                    Alert.alert('Preencha nome, quantidade e valor.');
-                    return;
-                  }
-                  acao(
-                    () => adicionarProduto(osId, {nome, quantidade, valor_venda}),
-                    'Produto adicionado!',
-                  ).then(() => {
-                    setModalProduto(false);
-                    setProdNome(''); setProdQtd('1'); setProdValor('');
+                  if (tecnicosSel.length === 0) {Alert.alert('Selecione ao menos um técnico.'); return;}
+                  const payload = tecnicosSel.map(id => ({
+                    tecnico_id: id,
+                    responsavel: id === (tecnicoResp ?? tecnicosSel[0]),
+                  }));
+                  acao(() => atribuirTecnicos(osId, payload), 'Técnicos atualizados!').then(() => {
+                    setModalTecnicos(false);
                   });
                 }}>
                 <Text style={{color: '#fff', fontWeight: '600'}}>
-                  {salvando ? '...' : '+ Adicionar'}
+                  {salvando ? '...' : 'Salvar'}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -717,10 +893,7 @@ const estilos = StyleSheet.create({
   secaoTitulo: {fontSize: 14, fontWeight: '800', color: CORES.cinza900, marginBottom: 12, letterSpacing: 0.2},
   secaoHeader: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10},
   acoesGrid: {flexDirection: 'row', flexWrap: 'wrap', gap: 10},
-  botaoAcao: {
-    paddingHorizontal: 18, paddingVertical: 11,
-    borderRadius: 999, minWidth: 110, alignItems: 'center',
-  },
+  botaoAcao: {paddingHorizontal: 18, paddingVertical: 11, borderRadius: 999, minWidth: 110, alignItems: 'center'},
   botaoPrimario: {
     backgroundColor: CORES.azul700,
     shadowColor: CORES.azul800, shadowOffset: {width: 0, height: 2},
@@ -728,11 +901,11 @@ const estilos = StyleSheet.create({
   },
   botaoNeutro: {backgroundColor: CORES.cinza100},
   botaoSucesso: {backgroundColor: CORES.verdeBg},
+  botaoGestor: {backgroundColor: CORES.azul100},
   botaoAcaoText: {fontWeight: '700', fontSize: 13.5, color: '#fff'},
   gpsIndicador: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: '#e5f5ec', borderRadius: 8,
-    padding: 8, marginTop: 12,
+    backgroundColor: '#e5f5ec', borderRadius: 8, padding: 8, marginTop: 12,
   },
   gpsDot: {width: 8, height: 8, borderRadius: 4, backgroundColor: CORES.verde},
   gpsText: {color: CORES.verde, fontSize: 12, fontWeight: '600'},
@@ -743,13 +916,19 @@ const estilos = StyleSheet.create({
   },
   input: {
     borderWidth: 1, borderColor: CORES.cinza300, borderRadius: 8,
-    paddingHorizontal: 12, paddingVertical: 10,
-    fontSize: 14, color: CORES.cinza900,
+    paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: CORES.cinza900,
   },
-  botaoPequeno: {
-    paddingHorizontal: 16, paddingVertical: 9,
-    borderRadius: 999, alignSelf: 'flex-start', marginTop: 10,
+  botaoPequeno: {paddingHorizontal: 16, paddingVertical: 9, borderRadius: 999, alignSelf: 'flex-start', marginTop: 10},
+  sugestoesProd: {
+    borderWidth: 1, borderColor: CORES.cinza100, borderRadius: 8,
+    marginVertical: 8, overflow: 'hidden',
   },
+  sugestaoProdItem: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    padding: 10, borderBottomWidth: 1, borderBottomColor: CORES.cinza100,
+  },
+  sugestaoProdNome: {fontSize: 13.5, fontWeight: '600', color: CORES.cinza900, flex: 1},
+  sugestaoProdValor: {fontSize: 13, color: CORES.azul700, fontWeight: '700'},
   produtoRow: {
     flexDirection: 'row', alignItems: 'center',
     paddingVertical: 8, borderBottomWidth: 1, borderColor: CORES.cinza100,
@@ -757,42 +936,46 @@ const estilos = StyleSheet.create({
   produtoNome: {fontWeight: '600', fontSize: 13.5, color: CORES.cinza900},
   produtoDetalhe: {fontSize: 12, color: CORES.cinza500, marginTop: 2},
   produtoSubtotal: {fontWeight: '700', fontSize: 13, color: CORES.cinza900},
-  totalRow: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    paddingTop: 10, marginTop: 4,
-  },
+  totalRow: {flexDirection: 'row', justifyContent: 'space-between', paddingTop: 10, marginTop: 4},
   totalLabel: {fontWeight: '700', color: CORES.cinza700},
   totalValor: {fontWeight: '800', color: CORES.azul900, fontSize: 15},
   vazioInline: {color: CORES.cinza500, fontSize: 13, marginTop: 4},
-  miniaturaFoto: {
-    width: 90, height: 90, borderRadius: 8,
-    marginRight: 8, backgroundColor: '#000',
-  },
-  miniaturaVideo: {
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: '#1c2430',
-  },
+  miniaturaFoto: {width: 90, height: 90, borderRadius: 8, marginRight: 8, backgroundColor: '#000'},
+  miniaturaVideo: {alignItems: 'center', justifyContent: 'center', backgroundColor: '#1c2430'},
   tecnicoRow: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingVertical: 8, borderBottomWidth: 1, borderColor: CORES.cinza100,
   },
   tecnicoAvatar: {
     width: 36, height: 36, borderRadius: 18,
-    backgroundColor: CORES.azul600,
-    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: CORES.azul600, alignItems: 'center', justifyContent: 'center',
   },
   tecnicoIniciais: {color: '#fff', fontWeight: '700', fontSize: 13},
   tecnicoNome: {fontWeight: '600', fontSize: 13.5, color: CORES.cinza900},
   tecnicoResp: {fontSize: 11, color: CORES.azul700, fontWeight: '700'},
+  tecnicoItemModal: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: CORES.cinza100,
+  },
+  tecnicoItemModalSel: {backgroundColor: CORES.azul50, borderRadius: 8, paddingHorizontal: 6},
+  tecnicoCheck: {
+    width: 22, height: 22, borderRadius: 11,
+    borderWidth: 2, borderColor: CORES.cinza300,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  tecnicoCheckSel: {backgroundColor: CORES.azul700, borderColor: CORES.azul700},
+  tecnicoInfo: {fontSize: 12, color: CORES.cinza500, marginTop: 1},
+  respBadge: {
+    paddingHorizontal: 8, paddingVertical: 4,
+    borderRadius: 999, borderWidth: 1, borderColor: CORES.cinza300,
+  },
+  respBadgeSel: {backgroundColor: CORES.azul700, borderColor: CORES.azul700},
+  respBadgeText: {fontSize: 11, fontWeight: '600', color: CORES.cinza500},
   histRow: {marginBottom: 8},
   histAcao: {fontWeight: '700', fontSize: 13, color: CORES.cinza900},
   histDetalhe: {fontSize: 12.5, color: CORES.cinza700, marginTop: 1},
   histData: {fontSize: 11, color: CORES.cinza500, marginTop: 2},
-  // Modal
-  modalOverlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
+  modalOverlay: {flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end'},
   modalBox: {
     backgroundColor: CORES.branco,
     borderTopLeftRadius: 20, borderTopRightRadius: 20,
@@ -801,13 +984,9 @@ const estilos = StyleSheet.create({
   modalTitulo: {fontSize: 17, fontWeight: '800', color: CORES.azul900, marginBottom: 16},
   modalLabel: {fontSize: 13, fontWeight: '600', color: CORES.cinza700, marginBottom: 6},
   modalBotoes: {flexDirection: 'row', gap: 10, marginTop: 4},
-  botaoModal: {
-    flex: 1, paddingVertical: 13,
-    borderRadius: 999, alignItems: 'center',
-  },
+  botaoModal: {flex: 1, paddingVertical: 13, borderRadius: 999, alignItems: 'center'},
   dateInput: {
     borderWidth: 1, borderColor: CORES.cinza300, borderRadius: 8,
-    paddingHorizontal: 12, paddingVertical: 10,
-    marginBottom: 12,
+    paddingHorizontal: 12, paddingVertical: 10, marginBottom: 12,
   },
 });

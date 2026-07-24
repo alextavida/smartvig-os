@@ -9,11 +9,14 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import {login} from '../api/auth';
 import {salvarSessao} from '../storage';
 import {useAuth} from '../hooks/useAuth';
 import {CORES} from '../config';
+
+const LOGO = require('../assets/logo.png');
 
 export function LoginScreen() {
   const {fazerLogin} = useAuth();
@@ -53,10 +56,11 @@ export function LoginScreen() {
         {/* Logo */}
         <View style={estilos.logoBox}>
           <View style={estilos.logoCirculo}>
-            <View style={estilos.logoInner}>
-              <Text style={estilos.logoS}>S</Text>
-              <Text style={estilos.logoV}>V</Text>
-            </View>
+            <Image
+              source={LOGO}
+              style={estilos.logoImagem}
+              resizeMode="contain"
+            />
           </View>
           <Text style={estilos.titulo}>SmartVig</Text>
           <Text style={estilos.subtitulo}>Vigilância Inteligente 24h</Text>
@@ -117,7 +121,7 @@ export function LoginScreen() {
           </TouchableOpacity>
         </View>
 
-        <Text style={estilos.versao}>SmartVig OS v1.0</Text>
+        <Text style={estilos.versao}>SmartVig OS v2.0</Text>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -134,16 +138,14 @@ const estilos = StyleSheet.create({
     paddingHorizontal: 28,
     paddingVertical: 48,
   },
-
-  // --- Logo ---
   logoBox: {
     alignItems: 'center',
     marginBottom: 36,
   },
   logoCirculo: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
+    width: 110,
+    height: 110,
+    borderRadius: 55,
     backgroundColor: '#ffffff18',
     borderWidth: 2,
     borderColor: '#ffffff30',
@@ -156,27 +158,10 @@ const estilos = StyleSheet.create({
     shadowRadius: 12,
     elevation: 10,
   },
-  logoInner: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: CORES.azul600,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    gap: 0,
-  },
-  logoS: {
-    fontSize: 26,
-    fontWeight: '900',
-    color: '#fff',
-    letterSpacing: -1,
-  },
-  logoV: {
-    fontSize: 26,
-    fontWeight: '900',
-    color: 'rgba(255,255,255,0.75)',
-    letterSpacing: -1,
+  logoImagem: {
+    width: 86,
+    height: 86,
+    borderRadius: 43,
   },
   titulo: {
     fontSize: 30,
@@ -206,8 +191,6 @@ const estilos = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 1.5,
   },
-
-  // --- Card ---
   card: {
     backgroundColor: CORES.branco,
     borderRadius: 20,

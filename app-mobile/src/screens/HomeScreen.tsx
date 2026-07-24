@@ -174,12 +174,22 @@ export function HomeScreen({navigation}: Props) {
                 {abaAtiva
                   ? 'Tente mudar o filtro.'
                   : isGestor
-                  ? 'Nenhuma OS cadastrada ainda.'
+                  ? 'Crie a primeira OS com o botão abaixo.'
                   : 'Aguarde atribuição pelo gestor.'}
               </Text>
             </View>
           }
         />
+      )}
+
+      {/* FAB: Nova OS (somente gestor) */}
+      {isGestor && (
+        <TouchableOpacity
+          style={estilos.fab}
+          onPress={() => navigation.navigate('CreateOs')}
+          activeOpacity={0.85}>
+          <Text style={estilos.fabText}>+</Text>
+        </TouchableOpacity>
       )}
     </View>
   );
@@ -200,83 +210,65 @@ const estilos = StyleSheet.create({
   perfilRow: {flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4},
   perfilBadge: {
     backgroundColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+    borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2,
   },
   perfilBadgeGestor: {backgroundColor: 'rgba(255,200,0,0.25)'},
   perfilBadgeText: {color: '#fff', fontSize: 10, fontWeight: '700'},
   headerSub: {color: 'rgba(255,255,255,0.65)', fontSize: 12},
   headerAcoes: {flexDirection: 'row', alignItems: 'center', gap: 10, position: 'relative'},
   notifBadge: {
-    position: 'absolute',
-    top: -6,
-    right: 30,
-    backgroundColor: CORES.vermelho,
-    borderRadius: 999,
-    minWidth: 18,
-    height: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1,
-    paddingHorizontal: 3,
+    position: 'absolute', top: -6, right: 30,
+    backgroundColor: CORES.vermelho, borderRadius: 999,
+    minWidth: 18, height: 18,
+    alignItems: 'center', justifyContent: 'center', zIndex: 1, paddingHorizontal: 3,
   },
   notifNum: {color: '#fff', fontSize: 10, fontWeight: '800'},
   avatar: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: CORES.azul600,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.3)',
+    width: 38, height: 38, borderRadius: 19,
+    backgroundColor: CORES.azul600, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)',
   },
   avatarGestor: {backgroundColor: '#b8860b'},
   avatarText: {color: '#fff', fontWeight: '700', fontSize: 14},
-
   resumoRow: {
-    backgroundColor: CORES.branco,
-    flexDirection: 'row',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: CORES.cinza100,
-    gap: 24,
+    backgroundColor: CORES.branco, flexDirection: 'row',
+    paddingVertical: 12, paddingHorizontal: 20,
+    borderBottomWidth: 1, borderBottomColor: CORES.cinza100, gap: 24,
   },
   resumoItem: {alignItems: 'center'},
   resumoValor: {fontSize: 20, fontWeight: '800'},
   resumoLabel: {fontSize: 11, color: CORES.cinza500, fontWeight: '600', marginTop: 1},
-
   abasScroll: {backgroundColor: CORES.branco, maxHeight: 52},
-  abasContainer: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    flexDirection: 'row',
-    gap: 8,
-  },
-  aba: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: CORES.cinza100,
-  },
+  abasContainer: {paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', gap: 8},
+  aba: {paddingHorizontal: 14, paddingVertical: 6, borderRadius: 999, backgroundColor: CORES.cinza100},
   abaAtiva: {backgroundColor: CORES.azul700},
   abaText: {fontSize: 13, fontWeight: '600', color: CORES.cinza700},
   abaTextAtiva: {color: '#fff'},
-  lista: {padding: 16, paddingBottom: 32},
+  lista: {padding: 16, paddingBottom: 100},
   centro: {flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32},
   carregandoText: {marginTop: 12, color: CORES.cinza500, fontSize: 14},
   erroText: {color: CORES.vermelho, textAlign: 'center', fontSize: 14, marginBottom: 16},
-  botaoRetry: {
-    backgroundColor: CORES.azul100,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 999,
-  },
+  botaoRetry: {backgroundColor: CORES.azul100, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 999},
   botaoRetryText: {color: CORES.azul700, fontWeight: '600'},
   vazio: {alignItems: 'center', paddingTop: 60},
   vazioIcon: {fontSize: 52, marginBottom: 16},
   vazioText: {fontSize: 16, fontWeight: '700', color: CORES.cinza700, marginBottom: 6},
   vazioSub: {fontSize: 13, color: CORES.cinza500, textAlign: 'center'},
+  fab: {
+    position: 'absolute',
+    bottom: 24,
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: CORES.azul700,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: CORES.azul900,
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  fabText: {color: '#fff', fontSize: 28, fontWeight: '300', lineHeight: 32},
 });

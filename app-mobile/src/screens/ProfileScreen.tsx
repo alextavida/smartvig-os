@@ -16,14 +16,18 @@ import {uploadFotoPerfil, urlMidia} from '../api/midias';
 import {useAuth} from '../hooks/useAuth';
 import {CORES} from '../config';
 
+const PERFIL_LABEL: Record<string, string> = {
+  gestor: 'Gestor',
+  tecnico: 'Técnico',
+};
+
 export function ProfileScreen() {
-  const {usuario, fazerLogout} = useAuth();
+  const {usuario, fazerLogout, atualizarUsuario} = useAuth();
 
   const [salvando, setSalvando] = useState(false);
   const [sucesso, setSucesso] = useState('');
   const [erro, setErro] = useState('');
 
-  // Senha
   const [senhaAtual, setSenhaAtual] = useState('');
   const [novaSenha, setNovaSenha] = useState('');
   const [confirmar, setConfirmar] = useState('');
@@ -42,11 +46,14 @@ export function ProfileScreen() {
       setSalvando(true);
       setErro('');
       try {
-        await uploadFotoPerfil({
+        const urlPublica = await uploadFotoPerfil({
           uri: asset.uri!,
           name: asset.fileName ?? 'foto_perfil.jpg',
           type: asset.type ?? 'image/jpeg',
         });
+        // Extrai o caminho relativo da URL completa para sincronizar no contexto
+        const caminhoRelativo = urlPublica.replace(/^https?:\/\/[^/]+\/app-tecnicos\//, '');
+        await atualizarUsuario({foto_perfil: caminhoRelativo});
         mostrarSucesso('Foto de perfil atualizada!');
       } catch (e: any) {
         setErro(e.message ?? 'Erro ao enviar foto.');
@@ -64,7 +71,7 @@ export function ProfileScreen() {
     ]);
   }
 
-  async function salvarSenha() {
+  async function salvarSenhaFn() {
     if (!senhaAtual.trim() || !novaSenha.trim() || !confirmar.trim()) {
       setErro('Preencha todos os campos.');
       return;
@@ -101,11 +108,11 @@ export function ProfileScreen() {
     .toUpperCase() || 'U';
 
   const fotoUri = usuario?.foto_perfil ? urlMidia(usuario.foto_perfil) : null;
+  const isGestor = usuario?.perfil === 'gestor';
 
   return (
     <ScrollView style={estilos.container} contentContainerStyle={estilos.scroll}>
 
-      {/* Alertas */}
       {sucesso ? (
         <View style={estilos.alertaSucesso}>
           <Text style={estilos.alertaSucessoText}>✓ {sucesso}</Text>
@@ -123,7 +130,7 @@ export function ProfileScreen() {
           {fotoUri ? (
             <Image source={{uri: fotoUri}} style={estilos.avatarGrande} />
           ) : (
-            <View style={[estilos.avatarGrande, estilos.avatarPlaceholder]}>
+            <View style={[estilos.avatarGrande, isGestor ? estilos.avatarGestor : estilos.avatarTecnico]}>
               <Text style={estilos.avatarIniciais}>{iniciais}</Text>
             </View>
           )}
@@ -133,6 +140,11 @@ export function ProfileScreen() {
         </TouchableOpacity>
         <Text style={estilos.nomeUsuario}>{usuario?.nome ?? '-'}</Text>
         <Text style={estilos.emailUsuario}>{usuario?.email ?? '-'}</Text>
+        <View style={[estilos.perfilBadge, isGestor && estilos.perfilBadgeGestor]}>
+          <Text style={[estilos.perfilBadgeText, isGestor && estilos.perfilBadgeTextGestor]}>
+            {PERFIL_LABEL[usuario?.perfil ?? 'tecnico']}
+          </Text>
+        </View>
         {salvando && (
           <ActivityIndicator size="small" color={CORES.azul600} style={{marginTop: 8}} />
         )}
@@ -141,7 +153,6 @@ export function ProfileScreen() {
       {/* Dados do perfil */}
       <View style={estilos.card}>
         <Text style={estilos.secaoTitulo}>Informações</Text>
-
         <View style={estilos.infoRow}>
           <Text style={estilos.infoLabel}>Nome</Text>
           <Text style={estilos.infoValor}>{usuario?.nome ?? '-'}</Text>
@@ -152,7 +163,7 @@ export function ProfileScreen() {
         </View>
         <View style={estilos.infoRow}>
           <Text style={estilos.infoLabel}>Perfil</Text>
-          <Text style={estilos.infoValor}>Técnico</Text>
+          <Text style={estilos.infoValor}>{PERFIL_LABEL[usuario?.perfil ?? 'tecnico']}</Text>
         </View>
       </View>
 
@@ -195,7 +206,7 @@ export function ProfileScreen() {
 
         <TouchableOpacity
           style={[estilos.botao, salvando && {opacity: 0.6}]}
-          onPress={salvarSenha}
+          onPress={salvarSenhaFn}
           disabled={salvando}>
           {salvando ? (
             <ActivityIndicator color="#fff" />
@@ -241,13 +252,9 @@ const estilos = StyleSheet.create({
     shadowColor: '#10284A', shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.07, shadowRadius: 6, elevation: 2,
   },
-  avatarGrande: {
-    width: 96, height: 96, borderRadius: 48,
-  },
-  avatarPlaceholder: {
-    backgroundColor: CORES.azul600,
-    alignItems: 'center', justifyContent: 'center',
-  },
+  avatarGrande: {width: 96, height: 96, borderRadius: 48},
+  avatarTecnico: {backgroundColor: CORES.azul600, alignItems: 'center', justifyContent: 'center'},
+  avatarGestor: {backgroundColor: '#b8860b', alignItems: 'center', justifyContent: 'center'},
   avatarIniciais: {color: '#fff', fontSize: 32, fontWeight: '800'},
   avatarCamBadge: {
     position: 'absolute', bottom: 0, right: 0,
@@ -258,6 +265,14 @@ const estilos = StyleSheet.create({
   },
   nomeUsuario: {fontSize: 18, fontWeight: '800', color: CORES.cinza900, marginTop: 14},
   emailUsuario: {fontSize: 13, color: CORES.cinza500, marginTop: 4},
+  perfilBadge: {
+    marginTop: 8,
+    backgroundColor: CORES.azul100,
+    borderRadius: 999, paddingHorizontal: 12, paddingVertical: 3,
+  },
+  perfilBadgeGestor: {backgroundColor: '#fdf3d9'},
+  perfilBadgeText: {color: CORES.azul700, fontSize: 12, fontWeight: '700'},
+  perfilBadgeTextGestor: {color: '#b8860b'},
   card: {
     backgroundColor: CORES.branco, borderRadius: 14,
     padding: 16, marginBottom: 12,

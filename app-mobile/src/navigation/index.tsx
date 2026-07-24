@@ -8,12 +8,14 @@ import {LoginScreen} from '../screens/LoginScreen';
 import {HomeScreen} from '../screens/HomeScreen';
 import {OsDetailScreen} from '../screens/OsDetailScreen';
 import {ProfileScreen} from '../screens/ProfileScreen';
+import {CreateOsScreen} from '../screens/CreateOsScreen';
 import {CORES} from '../config';
 
 export type RootStackParamList = {
   Login: undefined;
   App: undefined;
   OsDetail: {osId: number};
+  CreateOs: undefined;
 };
 
 export type AppTabParamList = {
@@ -78,6 +80,18 @@ export function Navigation() {
               options={{
                 headerShown: true,
                 title: 'Ordem de Serviço',
+                headerBackTitle: 'Voltar',
+                headerTintColor: CORES.azul700,
+                headerStyle: {backgroundColor: CORES.branco},
+                headerTitleStyle: {fontWeight: '800', color: CORES.cinza900, fontSize: 16},
+              }}
+            />
+            <RootStack.Screen
+              name="CreateOs"
+              component={CreateOsScreen}
+              options={{
+                headerShown: true,
+                title: 'Nova OS',
                 headerBackTitle: 'Voltar',
                 headerTintColor: CORES.azul700,
                 headerStyle: {backgroundColor: CORES.branco},
