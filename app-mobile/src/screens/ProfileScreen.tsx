@@ -94,11 +94,11 @@ export function ProfileScreen() {
   }
 
   const iniciais = usuario?.nome
-    .split(' ')
+    ?.split(' ')
     .slice(0, 2)
-    .map(p => p[0])
+    .map(p => p?.[0] ?? '')
     .join('')
-    .toUpperCase() ?? 'U';
+    .toUpperCase() || 'U';
 
   const fotoUri = usuario?.foto_perfil ? urlMidia(usuario.foto_perfil) : null;
 

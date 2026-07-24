@@ -62,11 +62,11 @@ export function HomeScreen({navigation}: Props) {
   };
 
   const iniciais = usuario?.nome
-    .split(' ')
+    ?.split(' ')
     .slice(0, 2)
-    .map(p => p[0])
+    .map(p => p?.[0] ?? '')
     .join('')
-    .toUpperCase() ?? 'U';
+    .toUpperCase() || 'U';
 
   return (
     <View style={estilos.container}>
@@ -74,7 +74,7 @@ export function HomeScreen({navigation}: Props) {
       <View style={estilos.header}>
         <View style={{flex: 1}}>
           <Text style={estilos.bemVindo}>
-            Olá, {usuario?.nome.split(' ')[0]}
+            Olá, {usuario?.nome?.split(' ')?.[0] ?? 'Usuário'}
           </Text>
           <View style={estilos.perfilRow}>
             <View style={[estilos.perfilBadge, isGestor && estilos.perfilBadgeGestor]}>

@@ -2,12 +2,14 @@ import {apiPost} from './client';
 import {Usuario} from '../types';
 
 interface LoginResposta {
-  usuario_id: number;
-  nome: string;
-  email: string;
-  perfil: 'gestor' | 'tecnico';
-  foto_perfil?: string;
   token: string;
+  usuario: {
+    id: number;
+    nome: string;
+    email: string;
+    perfil: 'gestor' | 'tecnico';
+    foto_perfil?: string;
+  };
 }
 
 export async function login(
@@ -20,11 +22,11 @@ export async function login(
   });
 
   return {
-    usuario_id: dados.usuario_id,
-    nome: dados.nome,
-    email: dados.email,
-    perfil: dados.perfil,
-    foto_perfil: dados.foto_perfil,
+    usuario_id: dados.usuario.id,
+    nome: dados.usuario.nome,
+    email: dados.usuario.email,
+    perfil: dados.usuario.perfil,
+    foto_perfil: dados.usuario.foto_perfil,
     jwt: dados.token,
   };
 }
