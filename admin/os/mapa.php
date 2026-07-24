@@ -1,8 +1,7 @@
 <?php
 /**
- * Mapa com a ultima posicao conhecida de cada tecnico.
- * Usa Leaflet + OpenStreetMap (gratuito, sem API key) e faz polling em
- * /api/gps/listar a cada 15s para simular tempo real (sem Firebase).
+ * Mapa com a ultima posicao dos tecnicos — Google Maps embed (sem API key).
+ * Atualiza a lista a cada 15s; clicar em um tecnico centraliza o mapa.
  */
 
 declare(strict_types=1);
@@ -13,122 +12,162 @@ $paginaAtiva = 'mapa';
 require_once __DIR__ . '/../../includes/header.php';
 ?>
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+.mapa-wrap {position:relative; background:#e8edf2; border-radius:12px; overflow:hidden; height:68vh; min-height:400px;}
+#mapa-iframe {width:100%; height:100%; border:0; display:block;}
+.mapa-placeholder {
+  position:absolute; inset:0; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; color:#64748b; gap:12px;
+  background:#f1f5f9;
+}
+.tec-card {
+  display:flex; align-items:center; gap:12px;
+  padding:12px 14px; border-radius:10px; cursor:pointer;
+  border:2px solid transparent; transition:.15s;
+  background:var(--cinza-100, #f1f5f9);
+}
+.tec-card:hover { background:#e8f1fc; border-color:#1d4ed8; }
+.tec-card.selecionado { background:#eff6ff; border-color:#1d4ed8; }
+.tec-dot { width:12px; height:12px; border-radius:50%; flex-shrink:0; }
+.tec-dot.ativo   { background:#16803c; box-shadow:0 0 0 3px #dcfce7; }
+.tec-dot.inativo { background:#94a3b8; }
+.badge-tempo { font-size:11px; background:#f1f5f9; padding:2px 8px; border-radius:999px; color:#64748b; }
+</style>
 
-<div class="card" style="padding:0; overflow:hidden; position:relative;">
-  <div id="mapa" style="width:100%; height:68vh; min-height:420px;"></div>
-  <div style="position:absolute;top:10px;right:10px;z-index:1000;">
-    <button id="btn-refresh-mapa" class="btn btn-primario btn-sm no-print" style="box-shadow:0 2px 8px rgba(0,0,0,.3);">
-      &#8635; Atualizar
-    </button>
+<!-- Mapa Google embed -->
+<div class="card" style="padding:0; overflow:hidden;">
+  <div class="mapa-wrap" id="mapa-wrap">
+    <div class="mapa-placeholder" id="mapa-placeholder">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+      <span style="font-size:14px; font-weight:600; color:#64748b;">Nenhum técnico com posição registrada.</span>
+      <span style="font-size:12px; color:#94a3b8;">Selecione um técnico abaixo para ver no mapa.</span>
+    </div>
+    <iframe id="mapa-iframe" src="" style="display:none;" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade"></iframe>
+  </div>
+  <div style="position:absolute; top:calc(68vh + 12px); right:16px; z-index:10; display:none;" id="btn-wrap">
+    <button id="btn-refresh" class="btn btn-primario btn-sm" style="box-shadow:0 2px 8px rgba(0,0,0,.25);">&#8635; Atualizar</button>
   </div>
 </div>
 
-<div class="card">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-    <h3 style="margin:0;">Tecnicos com posicao registrada</h3>
-    <span style="font-size:12px;color:#64748b;">Atualiza a cada 15s &bull; <span style="color:#16803c;">●</span> Ativo = enviou posicao nos ultimos 10 min</span>
-  </div>
-  <div id="listaPosicoes" style="font-size:13px;color:#64748b;">Carregando...</div>
+<div style="position:relative;margin-top:12px;">
+  <button id="btn-refresh2" class="btn btn-neutro btn-sm no-print" style="float:right;">&#8635; Atualizar posições</button>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<div class="card" style="margin-top:8px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
+    <h3 style="margin:0;">Técnicos com posição registrada</h3>
+    <span style="font-size:12px;color:#64748b;">
+      Atualiza a cada 15s &bull;
+      <span style="color:#16803c; font-weight:700;">●</span> Ativo = enviou nos últimos 10 min
+    </span>
+  </div>
+  <div id="lista-tecnicos" style="font-size:13px;color:#64748b;">Carregando...</div>
+</div>
+
 <script>
-// Aguarda api.js (carregado no footer) estar disponível antes de iniciar o mapa
-window.addEventListener('DOMContentLoaded', function () {
-  const mapa = L.map('mapa').setView([-15.78, -47.93], 5);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap contributors',
-    maxZoom: 19,
-  }).addTo(mapa);
+let tecnicoSelecionado = null;
+let posicoes = [];
 
-  const marcadores = {};
-  let primeiraCarga = true;
+function centrarMapa(lat, lng, nome) {
+  const iframe = document.getElementById('mapa-iframe');
+  const placeholder = document.getElementById('mapa-placeholder');
+  const q = encodeURIComponent(nome + ' (' + lat + ',' + lng + ')');
+  iframe.src = `https://maps.google.com/maps?q=${lat},${lng}&z=16&output=embed&hl=pt-BR&markers=${lat},${lng}`;
+  iframe.style.display = 'block';
+  placeholder.style.display = 'none';
+}
 
-  async function atualizarMapa() {
+function abrirGoogleMaps(lat, lng) {
+  window.open(`https://www.google.com/maps?q=${lat},${lng}`, '_blank');
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+
+  async function atualizarPosicoes() {
     try {
       const dados = await apiGet('/gps/listar.php');
-      const listaDiv = document.getElementById('listaPosicoes');
-      const posicoes = dados.posicoes || [];
-
-      if (!posicoes.length) {
-        listaDiv.innerHTML = '<div class="vazio" style="padding:20px;">Nenhum tecnico enviou posicao ainda.<br><small style="color:#94a3b8;">O app envia GPS automaticamente a cada 2 minutos quando aberto.</small></div>';
-      } else {
-        const agora = Date.now();
-        listaDiv.innerHTML = '<div style="overflow-x:auto;"><table><thead><tr><th>Tecnico</th><th>OS atual</th><th>Ultima posicao</th><th>Status</th></tr></thead><tbody>' +
-          posicoes.map(p => {
-            const dt = new Date(p.atualizado_em);
-            const minAtras = Math.round((agora - dt.getTime()) / 60000);
-            const ativo = minAtras < 10;
-            return `<tr>
-              <td><strong>${p.tecnico_nome}</strong></td>
-              <td>${p.cliente_nome ? '<a href="/app-tecnicos/admin/os/detalhe.php?id=' + p.os_id + '">#' + p.os_id + ' — ' + p.cliente_nome + '</a>' : '<span style="color:#94a3b8;">Sem OS ativa</span>'}</td>
-              <td>${dt.toLocaleString('pt-BR')}</td>
-              <td><span style="color:${ativo ? '#16803c' : '#94a3b8'};font-weight:700;">${ativo ? '● Ativo' : '○ ' + minAtras + 'min atrás'}</span></td>
-            </tr>`;
-          }).join('') +
-          '</tbody></table></div>';
-      }
-
-      const idsAtuais = new Set();
-      posicoes.forEach(p => {
-        idsAtuais.add(p.tecnico_id);
-        const latlng = [parseFloat(p.latitude), parseFloat(p.longitude)];
-        const dt = new Date(p.atualizado_em);
-        const minAtras = Math.round((Date.now() - dt.getTime()) / 60000);
-        const corCirculo = minAtras < 10 ? '#16803c' : '#94a3b8';
-        const popup = `
-          <div style="min-width:160px;">
-            <strong>${p.tecnico_nome}</strong><br>
-            ${p.cliente_nome
-              ? `<a href="/app-tecnicos/admin/os/detalhe.php?id=${p.os_id}" style="color:#1d4ed8;">OS #${p.os_id} — ${p.cliente_nome}</a>`
-              : '<span style="color:#94a3b8;">Sem OS ativa</span>'}
-            <br><small style="color:#64748b;">${dt.toLocaleString('pt-BR')}</small>
-          </div>`;
-
-        if (marcadores[p.tecnico_id]) {
-          marcadores[p.tecnico_id].marker.setLatLng(latlng).setPopupContent(popup);
-          marcadores[p.tecnico_id].circulo.setLatLng(latlng).setStyle({color: corCirculo, fillColor: corCirculo});
-        } else {
-          const circulo = L.circleMarker(latlng, {
-            radius: 10, color: corCirculo, fillColor: corCirculo,
-            fillOpacity: 0.85, weight: 2,
-          }).addTo(mapa).bindPopup(popup);
-          const label = L.marker(latlng, {
-            icon: L.divIcon({
-              className: '',
-              html: `<div style="background:${corCirculo};color:#fff;border-radius:999px;padding:2px 8px;font-size:11px;font-weight:700;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,.3);">${p.tecnico_nome.split(' ')[0]}</div>`,
-              iconAnchor: [0, -14],
-            }),
-          }).addTo(mapa);
-          marcadores[p.tecnico_id] = {marker: label, circulo};
-        }
-      });
-
-      Object.keys(marcadores).forEach(id => {
-        if (!idsAtuais.has(parseInt(id, 10))) {
-          mapa.removeLayer(marcadores[id].marker);
-          mapa.removeLayer(marcadores[id].circulo);
-          delete marcadores[id];
-        }
-      });
-
-      if (primeiraCarga && posicoes.length) {
-        const bounds = L.latLngBounds(posicoes.map(p => [parseFloat(p.latitude), parseFloat(p.longitude)]));
-        mapa.fitBounds(bounds.pad(0.4));
-        primeiraCarga = false;
-      }
+      posicoes = dados.posicoes || [];
+      renderizarLista();
     } catch (e) {
-      console.error('Falha ao atualizar mapa:', e.message);
+      console.error('Falha ao carregar posições:', e.message);
     }
   }
 
-  atualizarMapa();
-  setInterval(atualizarMapa, 15000); // atualiza a cada 15s
+  function renderizarLista() {
+    const listaDiv = document.getElementById('lista-tecnicos');
+    if (!posicoes.length) {
+      listaDiv.innerHTML = '<div class="vazio" style="padding:30px 20px;text-align:center;">' +
+        '<div style="font-size:36px;margin-bottom:8px;">📡</div>' +
+        '<div style="font-weight:600;color:#64748b;">Nenhum técnico enviou posição ainda.</div>' +
+        '<div style="font-size:12px;color:#94a3b8;margin-top:4px;">O app envia GPS automaticamente a cada 2 minutos quando aberto.</div>' +
+        '</div>';
+      return;
+    }
 
-  // Botão de forçar atualização
-  document.getElementById('btn-refresh-mapa')?.addEventListener('click', atualizarMapa);
+    const agora = Date.now();
+    let html = '<div style="display:flex;flex-direction:column;gap:10px;">';
+
+    posicoes.forEach(p => {
+      const dt = new Date(p.atualizado_em);
+      const minAtras = Math.round((agora - dt.getTime()) / 60000);
+      const ativo = minAtras < 10;
+      const isSel = tecnicoSelecionado === p.tecnico_id;
+      const lat = parseFloat(p.latitude);
+      const lng = parseFloat(p.longitude);
+
+      html += `
+        <div class="tec-card ${isSel ? 'selecionado' : ''}"
+             onclick="selecionarTecnico(${p.tecnico_id}, ${lat}, ${lng}, '${escHtml(p.tecnico_nome)}')">
+          <div class="tec-dot ${ativo ? 'ativo' : 'inativo'}"></div>
+          <div style="flex:1; min-width:0;">
+            <div style="font-weight:700; font-size:14px; color:#1c2430;">${escHtml(p.tecnico_nome)}</div>
+            <div style="font-size:12px; color:#64748b; margin-top:2px;">
+              ${p.cliente_nome
+                ? `<a href="/app-tecnicos/admin/os/detalhe.php?id=${p.os_id}" style="color:#1d4ed8; text-decoration:none;">OS #${p.os_id} — ${escHtml(p.cliente_nome)}</a>`
+                : '<span style="color:#94a3b8;">Sem OS ativa</span>'}
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+            <span class="badge-tempo">${ativo ? '● Ativo' : '○ ' + minAtras + 'min atrás'}</span>
+            <span style="font-size:11px;color:#94a3b8;">${dt.toLocaleString('pt-BR')}</span>
+          </div>
+          <button
+            onclick="event.stopPropagation(); abrirGoogleMaps(${lat}, ${lng})"
+            class="btn btn-neutro btn-sm"
+            title="Abrir no Google Maps"
+            style="padding:5px 10px; font-size:12px; flex-shrink:0;">
+            🗺
+          </button>
+        </div>`;
+    });
+
+    html += '</div>';
+    listaDiv.innerHTML = html;
+
+    // Se nenhum ainda selecionado, seleciona o primeiro ativo
+    if (tecnicoSelecionado === null && posicoes.length) {
+      const p = posicoes[0];
+      selecionarTecnico(p.tecnico_id, parseFloat(p.latitude), parseFloat(p.longitude), p.tecnico_nome);
+    }
+  }
+
+  atualizarPosicoes();
+  setInterval(atualizarPosicoes, 15000);
+
+  document.getElementById('btn-refresh2')?.addEventListener('click', atualizarPosicoes);
 });
+
+function selecionarTecnico(id, lat, lng, nome) {
+  tecnicoSelecionado = id;
+  centrarMapa(lat, lng, nome);
+  // Re-renderiza para atualizar a classe "selecionado"
+  document.querySelectorAll('.tec-card').forEach(el => el.classList.remove('selecionado'));
+  event.currentTarget?.classList?.add('selecionado');
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
 </script>
 
 <?php require_once __DIR__ . '/../../includes/footer.php'; ?>

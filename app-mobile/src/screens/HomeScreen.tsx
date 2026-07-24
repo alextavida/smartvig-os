@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useCallback, useRef} from 'react';
+import React, {useState, useEffect, useCallback, useRef, useMemo} from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   RefreshControl,
   ActivityIndicator,
   ScrollView,
+  TextInput,
 } from 'react-native';
 import Geolocation from '@react-native-community/geolocation';
 import {NativeStackScreenProps} from '@react-navigation/native-stack';
@@ -39,6 +40,7 @@ export function HomeScreen({navigation}: Props) {
   const [carregando, setCarregando] = useState(true);
   const [atualizando, setAtualizando] = useState(false);
   const [erro, setErro] = useState('');
+  const [busca, setBusca] = useState('');
 
   const isGestor = usuario?.perfil === 'gestor';
   const gpsTimer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -71,6 +73,17 @@ export function HomeScreen({navigation}: Props) {
       setErro(e.message ?? 'Erro ao carregar OS.');
     }
   }, []);
+
+  // Filtro local por busca (cliente_nome ou código)
+  const osListFiltrada = useMemo(() => {
+    if (!busca.trim()) { return osList; }
+    const termo = busca.toLowerCase().trim();
+    return osList.filter(o =>
+      (o.cliente_nome?.toLowerCase().includes(termo)) ||
+      (o.codigo?.toLowerCase().includes(termo)) ||
+      String(o.id).includes(termo),
+    );
+  }, [osList, busca]);
 
   useEffect(() => {
     setCarregando(true);
@@ -137,6 +150,25 @@ export function HomeScreen({navigation}: Props) {
         </View>
       )}
 
+      {/* Busca */}
+      <View style={estilos.buscaContainer}>
+        <Text style={estilos.buscaIcone}>🔍</Text>
+        <TextInput
+          style={estilos.buscaInput}
+          value={busca}
+          onChangeText={setBusca}
+          placeholder="Buscar por cliente, código ou nº..."
+          placeholderTextColor={CORES.cinza300}
+          returnKeyType="search"
+          clearButtonMode="while-editing"
+        />
+        {busca.length > 0 && (
+          <TouchableOpacity onPress={() => setBusca('')}>
+            <Text style={{color: CORES.cinza500, fontSize: 18, paddingHorizontal: 8}}>×</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
       {/* Abas de filtro */}
       <ScrollView
         horizontal
@@ -147,7 +179,7 @@ export function HomeScreen({navigation}: Props) {
           <TouchableOpacity
             key={aba.key}
             style={[estilos.aba, abaAtiva === aba.key && estilos.abaAtiva]}
-            onPress={() => setAbaAtiva(aba.key)}>
+            onPress={() => { setAbaAtiva(aba.key); setBusca(''); }}>
             <Text style={[estilos.abaText, abaAtiva === aba.key && estilos.abaTextAtiva]}>
               {aba.label}
             </Text>
@@ -170,7 +202,7 @@ export function HomeScreen({navigation}: Props) {
         </View>
       ) : (
         <FlatList
-          data={osList}
+          data={osListFiltrada}
           keyExtractor={item => String(item.id)}
           contentContainerStyle={estilos.lista}
           refreshControl={
@@ -260,6 +292,18 @@ const estilos = StyleSheet.create({
   resumoItem: {alignItems: 'center'},
   resumoValor: {fontSize: 20, fontWeight: '800'},
   resumoLabel: {fontSize: 11, color: CORES.cinza500, fontWeight: '600', marginTop: 1},
+  buscaContainer: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: CORES.branco,
+    paddingHorizontal: 14, paddingVertical: 8,
+    borderBottomWidth: 1, borderBottomColor: CORES.cinza100,
+    gap: 6,
+  },
+  buscaIcone: {fontSize: 15, color: CORES.cinza500},
+  buscaInput: {
+    flex: 1, fontSize: 14, color: CORES.cinza900,
+    paddingVertical: 6,
+  },
   abasScroll: {backgroundColor: CORES.branco, maxHeight: 52},
   abasContainer: {paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', gap: 8},
   aba: {paddingHorizontal: 14, paddingVertical: 6, borderRadius: 999, backgroundColor: CORES.cinza100},

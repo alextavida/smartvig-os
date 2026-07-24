@@ -242,7 +242,9 @@ function inicialTecnico(string $nome): string
 const OS_ID    = <?= (int) $os['id'] ?>;
 const GC_OS_ID = <?= (int) ($os['gc_os_id'] ?? 0) ?>;
 
-// Carrega dados ao vivo do GestãoClick se a OS tiver gc_os_id
+// Carrega dados ao vivo do GestãoClick após api.js estar disponível (carregado no footer)
+document.addEventListener('DOMContentLoaded', function () {
+
 if (GC_OS_ID) {
   (async () => {
     const statusEl = document.getElementById('gc-status');
@@ -359,6 +361,8 @@ if (GC_OS_ID) {
     }
   })();
 }
+
+}); // fim DOMContentLoaded
 
 function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');

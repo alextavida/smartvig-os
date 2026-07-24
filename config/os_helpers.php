@@ -98,8 +98,15 @@ function buscarOsOuFalhar(PDO $pdo, int $osId, array $payloadJwt): array
     }
 
     if ($payloadJwt['perfil'] === 'tecnico') {
-        $stmtAcesso = $pdo->prepare('SELECT 1 FROM os_tecnicos WHERE os_id = :os_id AND tecnico_id = :tecnico_id LIMIT 1');
-        $stmtAcesso->execute(['os_id' => $osId, 'tecnico_id' => $payloadJwt['usuario_id']]);
+        $tid = (int) $payloadJwt['usuario_id'];
+        // Verifica acesso via os_tecnicos OU via tecnico_id direto na OS (GC sync)
+        $stmtAcesso = $pdo->prepare(
+            'SELECT 1 FROM os_tecnicos WHERE os_id = :oid AND tecnico_id = :tid
+             UNION ALL
+             SELECT 1 FROM ordens_servico WHERE id = :oid2 AND tecnico_id = :tid2
+             LIMIT 1'
+        );
+        $stmtAcesso->execute(['oid' => $osId, 'tid' => $tid, 'oid2' => $osId, 'tid2' => $tid]);
         if (!$stmtAcesso->fetch()) {
             responderErro('Voce nao tem acesso a esta ordem de servico.', 403);
         }

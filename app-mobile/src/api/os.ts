@@ -13,13 +13,13 @@ interface ListarOsResposta {
 }
 
 export async function listarOs(params: ListarOsParams = {}): Promise<OS[]> {
-  const qs = new URLSearchParams();
-  if (params.status) {qs.set('status', params.status);}
-  if (params.pagina) {qs.set('pagina', String(params.pagina));}
-  if (params.tecnico_id) {qs.set('tecnico_id', String(params.tecnico_id));}
-  const resultado = await apiGet<ListarOsResposta>(
-    `/os/listar.php?${qs.toString()}`,
-  );
+  // Hermes (React Native) não implementa URLSearchParams.set — construção manual
+  const partes: string[] = [];
+  if (params.status)     { partes.push(`status=${encodeURIComponent(params.status)}`); }
+  if (params.pagina)     { partes.push(`pagina=${params.pagina}`); }
+  if (params.tecnico_id) { partes.push(`tecnico_id=${params.tecnico_id}`); }
+  const qs = partes.length ? '?' + partes.join('&') : '';
+  const resultado = await apiGet<ListarOsResposta>(`/os/listar.php${qs}`);
   return resultado.ordens_servico ?? [];
 }
 

@@ -311,11 +311,30 @@ export function OsDetailScreen({route, navigation}: Props) {
             <Text style={estilos.infoText}>{dataFormatada}</Text>
           </View>
 
-          {os.cliente_endereco ? (
-            <TouchableOpacity style={estilos.botaoRota} onPress={abrirRota}>
-              <Text style={estilos.botaoRotaText}>🗺 Abrir rota no Google Maps</Text>
-            </TouchableOpacity>
-          ) : null}
+          <View style={{flexDirection: 'row', gap: 8, marginTop: 10}}>
+            {os.cliente_endereco ? (
+              <TouchableOpacity style={[estilos.botaoRota, {flex: 1}]} onPress={abrirRota}>
+                <Text style={estilos.botaoRotaText}>🗺 Rota</Text>
+              </TouchableOpacity>
+            ) : null}
+            {os.cliente_telefone ? (
+              <TouchableOpacity
+                style={[estilos.botaoRota, {flex: 1, backgroundColor: '#e6f4ea'}]}
+                onPress={() => {
+                  const num = os.cliente_telefone!.replace(/\D/g, '');
+                  Linking.openURL(`https://wa.me/55${num}`);
+                }}>
+                <Text style={[estilos.botaoRotaText, {color: '#1e8e5a'}]}>💬 WhatsApp</Text>
+              </TouchableOpacity>
+            ) : null}
+            {os.cliente_telefone ? (
+              <TouchableOpacity
+                style={[estilos.botaoRota, {flex: 1}]}
+                onPress={() => Linking.openURL(`tel:${os.cliente_telefone}`)}>
+                <Text style={estilos.botaoRotaText}>📞 Ligar</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
         </View>
 
         {/* Botões de ação */}
@@ -394,6 +413,28 @@ export function OsDetailScreen({route, navigation}: Props) {
           )}
         </View>
 
+        {/* Equipamento (info do GestãoClick) */}
+        {os.observacoes && os.observacoes.startsWith('Equipamento:') ? (
+          <View style={[estilos.card, {borderLeftWidth: 3, borderLeftColor: CORES.azul600}]}>
+            <Text style={[estilos.secaoTitulo, {color: CORES.azul700}]}>🔧 Equipamento (GC)</Text>
+            {os.observacoes.split('\n').map((linha, i) => {
+              const [chave, ...resto] = linha.split(': ');
+              const valor = resto.join(': ');
+              if (!valor) { return null; }
+              return (
+                <View key={i} style={{flexDirection: 'row', marginBottom: 4}}>
+                  <Text style={{color: CORES.cinza500, fontSize: 12, width: 90, flexShrink: 0}}>{chave}:</Text>
+                  <Text style={{color: chave === 'Defeito' ? '#92400e' : CORES.cinza900,
+                    fontSize: 12, flex: 1,
+                    fontWeight: chave === 'Defeito' ? '700' : '400'}}>
+                    {valor}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+        ) : null}
+
         {/* Descrição / Laudo */}
         <View style={estilos.card}>
           <Text style={estilos.secaoTitulo}>Descrição / Laudo</Text>
@@ -462,13 +503,16 @@ export function OsDetailScreen({route, navigation}: Props) {
           {os.midias.length > 0 ? (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{marginTop: 8}}>
               {os.midias.map((m, i) => {
-                const uri = `${API_BASE_URL.replace('/api', '')}/${m.caminho_arquivo}`;
+                // m.url já é a URL completa fornecida pela API (evita construção manual com duplo slash)
+                const uri = m.url || `${API_BASE_URL.replace('/api', '')}/${m.caminho_arquivo}`;
                 return m.tipo === 'foto' ? (
-                  <Image key={i} source={{uri}} style={estilos.miniaturaFoto} resizeMode="cover" />
+                  <TouchableOpacity key={i} onPress={() => Linking.openURL(uri)}>
+                    <Image source={{uri}} style={estilos.miniaturaFoto} resizeMode="cover" />
+                  </TouchableOpacity>
                 ) : (
-                  <View key={i} style={[estilos.miniaturaFoto, estilos.miniaturaVideo]}>
+                  <TouchableOpacity key={i} style={[estilos.miniaturaFoto, estilos.miniaturaVideo]} onPress={() => Linking.openURL(uri)}>
                     <Text style={{color: '#fff', fontSize: 28}}>▶</Text>
-                  </View>
+                  </TouchableOpacity>
                 );
               })}
             </ScrollView>

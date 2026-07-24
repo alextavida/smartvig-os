@@ -202,13 +202,28 @@ try {
                 $atualizadas++;
             } else {
                 $situacaoLocal = $situacoesMap[$gcSituacaoId] ?? 'aberto';
+
+                // Tenta mapear o nome_tecnico/tecnico_id do GC para um usuário local
+                $gcNomeTecnico = $item['nome_tecnico'] ?? null;
+                $tecnicoLocalId = null;
+                if ($gcNomeTecnico) {
+                    $stmtTec = $pdo->prepare("SELECT id FROM usuarios WHERE perfil='tecnico' AND ativo=1 AND nome LIKE :nome LIMIT 1");
+                    $stmtTec->execute(['nome' => '%' . trim($gcNomeTecnico) . '%']);
+                    $tecnicoLocal = $stmtTec->fetch();
+                    if ($tecnicoLocal) {
+                        $tecnicoLocalId = (int) $tecnicoLocal['id'];
+                    }
+                }
+
                 $pdo->prepare(
                     'INSERT INTO ordens_servico
                         (gc_os_id, gc_cliente_id, gc_situacao_id, codigo, cliente_nome, cliente_endereco,
-                         cliente_telefone, observacoes, situacao_local, data_agendamento, sincronizado_gc)
+                         cliente_telefone, observacoes, situacao_local, prioridade, data_agendamento,
+                         tecnico_id, sincronizado_gc)
                      VALUES
                         (:gc_os_id, :gc_cliente_id, :gc_situacao_id, :codigo, :cliente_nome, :cliente_endereco,
-                         :cliente_telefone, :observacoes, :situacao_local, :data_agendamento, 1)'
+                         :cliente_telefone, :observacoes, :situacao_local, \'baixo\', :data_agendamento,
+                         :tecnico_id, 1)'
                 )->execute([
                     'gc_os_id'        => $gcOsId,
                     'gc_cliente_id'   => $gcClienteId,
@@ -220,7 +235,16 @@ try {
                     'observacoes'     => $descricaoGc,
                     'situacao_local'  => $situacaoLocal,
                     'data_agendamento'=> $dataAgendamento,
+                    'tecnico_id'      => $tecnicoLocalId,
                 ]);
+
+                // Se mapeou técnico local, insere na tabela os_tecnicos
+                if ($tecnicoLocalId) {
+                    $novaOsId = (int) $pdo->lastInsertId();
+                    $pdo->prepare(
+                        'INSERT IGNORE INTO os_tecnicos (os_id, tecnico_id, responsavel) VALUES (:os_id, :tecnico_id, 1)'
+                    )->execute(['os_id' => $novaOsId, 'tecnico_id' => $tecnicoLocalId]);
+                }
                 $criadas++;
             }
         }

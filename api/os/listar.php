@@ -28,8 +28,10 @@ $condicoes = [];
 $parametros = [];
 
 if ($payload['perfil'] === 'tecnico') {
-    $condicoes[] = 'EXISTS (SELECT 1 FROM os_tecnicos ot WHERE ot.os_id = os.id AND ot.tecnico_id = :tecnico_logado)';
-    $parametros['tecnico_logado'] = $payload['usuario_id'];
+    // Inclui OS da tabela os_tecnicos OU com tecnico_id direto (OS sincronizadas do GC)
+    $condicoes[] = '(EXISTS (SELECT 1 FROM os_tecnicos ot WHERE ot.os_id = os.id AND ot.tecnico_id = :tecnico_logado) OR os.tecnico_id = :tecnico_logado2)';
+    $parametros['tecnico_logado']  = $payload['usuario_id'];
+    $parametros['tecnico_logado2'] = $payload['usuario_id'];
 }
 
 if (!empty($_GET['status'])) {
