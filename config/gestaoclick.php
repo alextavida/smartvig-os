@@ -31,17 +31,22 @@ class GestaoClickAPI
      */
     private function requisitar(string $metodo, string $caminho, array $dados = []): array
     {
-        $url = $this->baseUrl . ltrim($caminho, '/');
+        // GestãoClick exige access_token e secret_access na query string.
+        // Headers com underscores são bloqueados pelo nginx deles por padrão.
+        $authQuery = http_build_query([
+            'access_token'  => $this->accessToken,
+            'secret_access' => $this->secretAccess,
+        ]);
+
+        $url = $this->baseUrl . ltrim($caminho, '/') . '?' . $authQuery;
 
         if ($metodo === 'GET' && !empty($dados)) {
-            $url .= (str_contains($url, '?') ? '&' : '?') . http_build_query($dados);
+            $url .= '&' . http_build_query($dados);
         }
 
         $ch = curl_init($url);
 
         $headers = [
-            'access_token: ' . $this->accessToken,
-            'secret_access: ' . $this->secretAccess,
             'Content-Type: application/json',
             'Accept: application/json',
         ];

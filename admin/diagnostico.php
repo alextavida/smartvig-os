@@ -21,17 +21,14 @@ $gcBase   = rtrim(obterConfiguracao('gc_base_url', 'https://api.gestaoclick.com/
 // Chama um endpoint GC via cURL e retorna tudo (código, headers, corpo)
 function chamadaRawGC(string $base, string $token, string $secret, string $endpoint, array $params = []): array
 {
-    $url = $base . ltrim($endpoint, '/');
-    if (!empty($params)) {
-        $url .= '?' . http_build_query($params);
-    }
+    // Tokens enviados como query params (headers com underscore são bloqueados por nginx)
+    $auth = ['access_token' => $token, 'secret_access' => $secret];
+    $url = $base . ltrim($endpoint, '/') . '?' . http_build_query(array_merge($auth, $params));
 
     $ch = curl_init($url);
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_HTTPHEADER     => [
-            'access_token: ' . $token,
-            'secret_access: '  . $secret,
             'Content-Type: application/json',
             'Accept: application/json',
         ],
