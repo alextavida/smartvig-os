@@ -73,33 +73,48 @@ try {
         $endCliente = trim(implode(', ', $partes)) ?: null;
     }
 
-    // Produtos — GC aninha: produtos[n].produto = { nome, codigo, ... }, produtos[n].quantidade, produtos[n].valor_venda
+    // Retorna primeiro valor não-nulo e não-vazio dentre os campos fornecidos
+    $primeiraNaoVazia = static function (array ...$fontes): string {
+        $campos = ['nome', 'descricao', 'nome_produto', 'nome_servico', 'descricao_produto',
+                   'descricao_servico', 'titulo', 'label'];
+        foreach ($fontes as $fonte) {
+            if (!is_array($fonte)) { continue; }
+            foreach ($campos as $c) {
+                if (isset($fonte[$c]) && is_string($fonte[$c]) && $fonte[$c] !== '') {
+                    return $fonte[$c];
+                }
+            }
+        }
+        return '';
+    };
+
+    // Produtos — GC pode aninhar em produto.nome ou trazer na raiz do item
     $produtosRaw = $raw['produtos'] ?? $raw['itens'] ?? $raw['pecas'] ?? [];
     $produtos = [];
     foreach ((is_array($produtosRaw) ? $produtosRaw : []) as $pItem) {
         if (!is_array($pItem)) { continue; }
-        $pObj = (is_array($pItem['produto'] ?? null)) ? $pItem['produto'] : $pItem;
-        $nomeProd = $pObj['nome'] ?? $pObj['descricao'] ?? $pItem['nome'] ?? $pItem['descricao'] ?? '';
-        $codProd  = $pObj['codigo'] ?? $pItem['codigo'] ?? '';
+        $pObj     = is_array($pItem['produto'] ?? null) ? $pItem['produto'] : [];
+        $nomeProd = $primeiraNaoVazia($pObj, $pItem);
+        $codProd  = (string) ($pObj['codigo'] ?? $pItem['codigo'] ?? $pObj['id'] ?? '');
         $produtos[] = [
-            'nome'        => $codProd ? "{$codProd} - {$nomeProd}" : $nomeProd,
-            'quantidade'  => $pItem['quantidade']  ?? $pItem['qtd'] ?? 1,
-            'valor_venda' => $pItem['valor_venda']  ?? $pItem['valor'] ?? $pObj['valor_venda'] ?? 0,
+            'nome'        => ($codProd && $nomeProd) ? "{$codProd} - {$nomeProd}" : ($nomeProd ?: $codProd),
+            'quantidade'  => (float) ($pItem['quantidade'] ?? $pItem['qtd'] ?? 1),
+            'valor_venda' => (float) ($pItem['valor_venda'] ?? $pItem['valor'] ?? $pObj['valor_venda'] ?? 0),
         ];
     }
 
-    // Serviços — GC aninha: servicos[n].servico = { nome, codigo, ... }, servicos[n].quantidade, servicos[n].valor
+    // Serviços — GC pode aninhar em servico.nome ou trazer na raiz do item
     $servicosRaw = $raw['servicos'] ?? [];
     $servicos = [];
     foreach ((is_array($servicosRaw) ? $servicosRaw : []) as $sItem) {
         if (!is_array($sItem)) { continue; }
-        $sObj = (is_array($sItem['servico'] ?? null)) ? $sItem['servico'] : $sItem;
-        $nomeSrv = $sObj['nome'] ?? $sObj['descricao'] ?? $sItem['nome'] ?? $sItem['descricao'] ?? '';
-        $codSrv  = $sObj['codigo'] ?? $sItem['codigo'] ?? '';
+        $sObj    = is_array($sItem['servico'] ?? null) ? $sItem['servico'] : [];
+        $nomeSrv = $primeiraNaoVazia($sObj, $sItem);
+        $codSrv  = (string) ($sObj['codigo'] ?? $sItem['codigo'] ?? $sObj['id'] ?? '');
         $servicos[] = [
-            'nome'       => $codSrv ? "{$codSrv} - {$nomeSrv}" : $nomeSrv,
-            'quantidade' => $sItem['quantidade'] ?? $sItem['qtd'] ?? 1,
-            'valor'      => $sItem['valor']       ?? $sItem['valor_venda'] ?? $sObj['valor'] ?? 0,
+            'nome'       => ($codSrv && $nomeSrv) ? "{$codSrv} - {$nomeSrv}" : ($nomeSrv ?: $codSrv),
+            'quantidade' => (float) ($sItem['quantidade'] ?? $sItem['qtd'] ?? 1),
+            'valor'      => (float) ($sItem['valor'] ?? $sItem['valor_venda'] ?? $sObj['valor'] ?? 0),
         ];
     }
 
@@ -121,8 +136,11 @@ try {
     }
 
     responderSucesso([
-        'chaves'   => $chaves,
-        'raw'      => $raw,
+        'chaves'       => $chaves,
+        'raw'          => $raw,
+        // debug: primeiros itens brutos de produtos/serviços para inspecionar estrutura
+        'debug_prod0'  => $produtosRaw[0] ?? null,
+        'debug_serv0'  => $servicosRaw[0] ?? null,
         'extraido' => [
             'cliente_nome'     => $clienteNome,
             'cliente_telefone' => $clienteTel,

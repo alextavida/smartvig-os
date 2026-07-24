@@ -11,6 +11,7 @@ require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../config/response.php';
 require_once __DIR__ . '/../../config/auth.php';
 require_once __DIR__ . '/../../config/os_helpers.php';
+require_once __DIR__ . '/../../config/gestaoclick.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     responderErro('Metodo nao permitido. Use GET.', 405);
@@ -55,9 +56,77 @@ unset($midia);
 $os['produtos'] = $os['produtos_json'] ? json_decode($os['produtos_json'], true) : [];
 unset($os['produtos_json'], $os['midias_json']);
 
-// Retorna tudo flat: OSDetalhe = campos da OS + tecnicos + historico + midias
+// Busca produtos e serviços ao vivo do GestãoClick (silencioso em caso de falha)
+$gcProdutos = [];
+$gcServicos = [];
+$gcEquipamentos = [];
+if (!empty($os['gc_os_id'])) {
+    try {
+        $gc     = new GestaoClickAPI();
+        $gcDados = $gc->visualizarOS((int) $os['gc_os_id']);
+
+        $primeiraNaoVazia = static function (array ...$fontes): string {
+            $campos = ['nome', 'descricao', 'nome_produto', 'nome_servico',
+                       'descricao_produto', 'descricao_servico', 'titulo'];
+            foreach ($fontes as $fonte) {
+                if (!is_array($fonte)) { continue; }
+                foreach ($campos as $c) {
+                    if (isset($fonte[$c]) && is_string($fonte[$c]) && $fonte[$c] !== '') {
+                        return $fonte[$c];
+                    }
+                }
+            }
+            return '';
+        };
+
+        foreach (($gcDados['produtos'] ?? []) as $pItem) {
+            if (!is_array($pItem)) { continue; }
+            $pObj = is_array($pItem['produto'] ?? null) ? $pItem['produto'] : [];
+            $nome = $primeiraNaoVazia($pObj, $pItem);
+            $cod  = (string) ($pObj['codigo'] ?? $pItem['codigo'] ?? '');
+            $gcProdutos[] = [
+                'nome'        => ($cod && $nome) ? "{$cod} - {$nome}" : ($nome ?: $cod),
+                'quantidade'  => (float) ($pItem['quantidade'] ?? 1),
+                'valor_venda' => (float) ($pItem['valor_venda'] ?? $pItem['valor'] ?? 0),
+            ];
+        }
+
+        foreach (($gcDados['servicos'] ?? []) as $sItem) {
+            if (!is_array($sItem)) { continue; }
+            $sObj = is_array($sItem['servico'] ?? null) ? $sItem['servico'] : [];
+            $nome = $primeiraNaoVazia($sObj, $sItem);
+            $cod  = (string) ($sObj['codigo'] ?? $sItem['codigo'] ?? '');
+            $gcServicos[] = [
+                'nome'       => ($cod && $nome) ? "{$cod} - {$nome}" : ($nome ?: $cod),
+                'quantidade' => (float) ($sItem['quantidade'] ?? 1),
+                'valor'      => (float) ($sItem['valor'] ?? $sItem['valor_venda'] ?? 0),
+            ];
+        }
+
+        foreach (($gcDados['equipamentos'] ?? []) as $eqItem) {
+            $eq = is_array($eqItem['equipamento'] ?? null) ? $eqItem['equipamento'] : $eqItem;
+            if (!is_array($eq)) { continue; }
+            $gcEquipamentos[] = [
+                'tipo'     => $eq['equipamento'] ?? $eq['tipo'] ?? null,
+                'marca'    => $eq['marca']   ?? null,
+                'modelo'   => $eq['modelo']  ?? null,
+                'serie'    => $eq['serie']   ?? null,
+                'defeitos' => $eq['defeitos'] ?? null,
+                'solucao'  => $eq['solucao'] ?? null,
+                'laudo'    => $eq['laudo']   ?? null,
+            ];
+        }
+    } catch (GestaoClickApiException) {
+        // Falha silenciosa — dados locais continuam disponíveis
+    }
+}
+
+// Retorna tudo flat: OSDetalhe = campos da OS + tecnicos + historico + midias + dados GC
 responderSucesso(array_merge($os, [
-    'tecnicos' => $tecnicos,
-    'historico' => $historico,
-    'midias'   => $midias,
+    'tecnicos'        => $tecnicos,
+    'historico'       => $historico,
+    'midias'          => $midias,
+    'gc_produtos'     => $gcProdutos,
+    'gc_servicos'     => $gcServicos,
+    'gc_equipamentos' => $gcEquipamentos,
 ]));

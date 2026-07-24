@@ -24,7 +24,7 @@ import {
 import {listarTecnicos} from '../api/tecnicos';
 import {atualizarGps} from '../api/gps';
 import {uploadMidia} from '../api/midias';
-import {OSDetalhe, TecnicoLista, ProdutoGC} from '../types';
+import {OSDetalhe, TecnicoLista, ProdutoGC, GCEquipamento} from '../types';
 import {StatusBadge} from '../components/StatusBadge';
 import {PriorityBadge} from '../components/PriorityBadge';
 import {useAuth} from '../hooks/useAuth';
@@ -413,27 +413,85 @@ export function OsDetailScreen({route, navigation}: Props) {
           )}
         </View>
 
-        {/* Equipamento (info do GestãoClick) */}
-        {os.observacoes && os.observacoes.startsWith('Equipamento:') ? (
+        {/* Equipamentos do GestãoClick */}
+        {(os.gc_equipamentos ?? []).length > 0 && (
           <View style={[estilos.card, {borderLeftWidth: 3, borderLeftColor: CORES.azul600}]}>
-            <Text style={[estilos.secaoTitulo, {color: CORES.azul700}]}>🔧 Equipamento (GC)</Text>
-            {os.observacoes.split('\n').map((linha, i) => {
-              const [chave, ...resto] = linha.split(': ');
-              const valor = resto.join(': ');
-              if (!valor) { return null; }
-              return (
-                <View key={i} style={{flexDirection: 'row', marginBottom: 4}}>
-                  <Text style={{color: CORES.cinza500, fontSize: 12, width: 90, flexShrink: 0}}>{chave}:</Text>
-                  <Text style={{color: chave === 'Defeito' ? '#92400e' : CORES.cinza900,
-                    fontSize: 12, flex: 1,
-                    fontWeight: chave === 'Defeito' ? '700' : '400'}}>
-                    {valor}
+            <Text style={[estilos.secaoTitulo, {color: CORES.azul700}]}>🔧 Equipamento (GestãoClick)</Text>
+            {(os.gc_equipamentos ?? []).map((eq: GCEquipamento, i: number) => (
+              <View key={i} style={i > 0 ? {marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: CORES.cinza100} : undefined}>
+                {[
+                  ['Tipo',   eq.tipo],
+                  ['Marca',  eq.marca],
+                  ['Modelo', eq.modelo],
+                  ['Série',  eq.serie],
+                ].filter(([, v]) => v).map(([k, v]) => (
+                  <View key={k} style={{flexDirection: 'row', marginBottom: 3}}>
+                    <Text style={{color: CORES.cinza500, fontSize: 12, width: 68, flexShrink: 0}}>{k}:</Text>
+                    <Text style={{color: CORES.cinza900, fontSize: 12, flex: 1}}>{v}</Text>
+                  </View>
+                ))}
+                {eq.defeitos ? (
+                  <View style={{marginTop: 6, backgroundColor: '#fffbeb', borderRadius: 6, padding: 8}}>
+                    <Text style={{fontSize: 10, color: '#92400e', fontWeight: '700', marginBottom: 2}}>DEFEITO</Text>
+                    <Text style={{fontSize: 12, color: '#92400e'}}>{eq.defeitos}</Text>
+                  </View>
+                ) : null}
+                {eq.solucao ? (
+                  <View style={{marginTop: 4, backgroundColor: '#f0fdf4', borderRadius: 6, padding: 8}}>
+                    <Text style={{fontSize: 10, color: '#166534', fontWeight: '700', marginBottom: 2}}>SOLUÇÃO</Text>
+                    <Text style={{fontSize: 12, color: '#166534'}}>{eq.solucao}</Text>
+                  </View>
+                ) : null}
+                {eq.laudo ? (
+                  <View style={{marginTop: 4, backgroundColor: '#eff6ff', borderRadius: 6, padding: 8}}>
+                    <Text style={{fontSize: 10, color: '#1d4ed8', fontWeight: '700', marginBottom: 2}}>LAUDO</Text>
+                    <Text style={{fontSize: 12, color: '#1d4ed8'}}>{eq.laudo}</Text>
+                  </View>
+                ) : null}
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Serviços do GestãoClick */}
+        {(os.gc_servicos ?? []).length > 0 && (
+          <View style={estilos.card}>
+            <Text style={estilos.secaoTitulo}>🛠 Serviços (GestãoClick)</Text>
+            {(os.gc_servicos ?? []).map((s, i) => (
+              <View key={i} style={estilos.produtoRow}>
+                <View style={{flex: 1}}>
+                  <Text style={estilos.produtoNome}>{s.nome || '—'}</Text>
+                  <Text style={estilos.produtoDetalhe}>{s.quantidade}x</Text>
+                </View>
+                {s.valor > 0 && (
+                  <Text style={estilos.produtoSubtotal}>
+                    R$ {(s.quantidade * s.valor).toFixed(2).replace('.', ',')}
+                  </Text>
+                )}
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Produtos/Peças do GestãoClick */}
+        {(os.gc_produtos ?? []).length > 0 && (
+          <View style={estilos.card}>
+            <Text style={estilos.secaoTitulo}>📦 Produtos/Peças (GestãoClick)</Text>
+            {(os.gc_produtos ?? []).map((p, i) => (
+              <View key={i} style={estilos.produtoRow}>
+                <View style={{flex: 1}}>
+                  <Text style={estilos.produtoNome}>{p.nome || '—'}</Text>
+                  <Text style={estilos.produtoDetalhe}>
+                    {p.quantidade}x R$ {Number(p.valor_venda).toFixed(2).replace('.', ',')}
                   </Text>
                 </View>
-              );
-            })}
+                <Text style={estilos.produtoSubtotal}>
+                  R$ {(p.quantidade * p.valor_venda).toFixed(2).replace('.', ',')}
+                </Text>
+              </View>
+            ))}
           </View>
-        ) : null}
+        )}
 
         {/* Descrição / Laudo */}
         <View style={estilos.card}>

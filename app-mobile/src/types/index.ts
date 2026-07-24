@@ -52,11 +52,36 @@ export interface Historico {
   usuario_nome: string | null;
 }
 
+export interface GCProduto {
+  nome: string;
+  quantidade: number;
+  valor_venda: number;
+}
+
+export interface GCServico {
+  nome: string;
+  quantidade: number;
+  valor: number;
+}
+
+export interface GCEquipamento {
+  tipo: string | null;
+  marca: string | null;
+  modelo: string | null;
+  serie: string | null;
+  defeitos: string | null;
+  solucao: string | null;
+  laudo: string | null;
+}
+
 export interface OSDetalhe extends OS {
   tecnicos: OSTecnico[];
   historico: Historico[];
   midias: Midia[];
   produtos: Produto[];
+  gc_produtos: GCProduto[];
+  gc_servicos: GCServico[];
+  gc_equipamentos: GCEquipamento[];
 }
 
 export interface Produto {
