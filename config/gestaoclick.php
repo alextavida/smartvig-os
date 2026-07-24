@@ -110,7 +110,9 @@ class GestaoClickAPI
 
     public function visualizarOS(int $gcOsId): array
     {
-        return $this->get("ordens_servicos/{$gcOsId}/");
+        $resposta = $this->get("ordens_servicos/{$gcOsId}/");
+        // GC envolve registros únicos em { "code":200, "status":"success", "data":{ ... } }
+        return $resposta['data'] ?? $resposta;
     }
 
     public function criarOS(array $dados): array

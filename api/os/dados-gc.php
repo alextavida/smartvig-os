@@ -18,11 +18,27 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 }
 
 $payload = exigirAutenticacao();
-exigirPerfil($payload, ['gestor']);
-
+// Técnicos também podem acessar — mas apenas OS que lhes pertencem
 $gcOsId = (int) ($_GET['gc_os_id'] ?? 0);
 if ($gcOsId <= 0) {
     responderErro('Parametro gc_os_id obrigatorio.', 422);
+}
+
+if ($payload['perfil'] !== 'gestor') {
+    // Verifica se o técnico tem acesso a esta OS via gc_os_id
+    $pdo = obterConexao();
+    $tid = (int) $payload['usuario_id'];
+    $stmtAcesso = $pdo->prepare(
+        'SELECT 1 FROM ordens_servico os
+         WHERE os.gc_os_id = :gc_os_id
+           AND (EXISTS (SELECT 1 FROM os_tecnicos ot WHERE ot.os_id = os.id AND ot.tecnico_id = :tid)
+                OR os.tecnico_id = :tid2)
+         LIMIT 1'
+    );
+    $stmtAcesso->execute(['gc_os_id' => $gcOsId, 'tid' => $tid, 'tid2' => $tid]);
+    if (!$stmtAcesso->fetch()) {
+        responderErro('Acesso negado a esta OS.', 403);
+    }
 }
 
 try {
@@ -57,9 +73,35 @@ try {
         $endCliente = trim(implode(', ', $partes)) ?: null;
     }
 
-    // Produtos/serviços incluídos na OS
-    $produtos  = $raw['produtos'] ?? $raw['itens'] ?? $raw['pecas'] ?? [];
-    $servicos  = $raw['servicos'] ?? [];
+    // Produtos — GC aninha: produtos[n].produto = { nome, codigo, ... }, produtos[n].quantidade, produtos[n].valor_venda
+    $produtosRaw = $raw['produtos'] ?? $raw['itens'] ?? $raw['pecas'] ?? [];
+    $produtos = [];
+    foreach ((is_array($produtosRaw) ? $produtosRaw : []) as $pItem) {
+        if (!is_array($pItem)) { continue; }
+        $pObj = (is_array($pItem['produto'] ?? null)) ? $pItem['produto'] : $pItem;
+        $nomeProd = $pObj['nome'] ?? $pObj['descricao'] ?? $pItem['nome'] ?? $pItem['descricao'] ?? '';
+        $codProd  = $pObj['codigo'] ?? $pItem['codigo'] ?? '';
+        $produtos[] = [
+            'nome'        => $codProd ? "{$codProd} - {$nomeProd}" : $nomeProd,
+            'quantidade'  => $pItem['quantidade']  ?? $pItem['qtd'] ?? 1,
+            'valor_venda' => $pItem['valor_venda']  ?? $pItem['valor'] ?? $pObj['valor_venda'] ?? 0,
+        ];
+    }
+
+    // Serviços — GC aninha: servicos[n].servico = { nome, codigo, ... }, servicos[n].quantidade, servicos[n].valor
+    $servicosRaw = $raw['servicos'] ?? [];
+    $servicos = [];
+    foreach ((is_array($servicosRaw) ? $servicosRaw : []) as $sItem) {
+        if (!is_array($sItem)) { continue; }
+        $sObj = (is_array($sItem['servico'] ?? null)) ? $sItem['servico'] : $sItem;
+        $nomeSrv = $sObj['nome'] ?? $sObj['descricao'] ?? $sItem['nome'] ?? $sItem['descricao'] ?? '';
+        $codSrv  = $sObj['codigo'] ?? $sItem['codigo'] ?? '';
+        $servicos[] = [
+            'nome'       => $codSrv ? "{$codSrv} - {$nomeSrv}" : $nomeSrv,
+            'quantidade' => $sItem['quantidade'] ?? $sItem['qtd'] ?? 1,
+            'valor'      => $sItem['valor']       ?? $sItem['valor_venda'] ?? $sObj['valor'] ?? 0,
+        ];
+    }
 
     // Equipamentos — confirmados como equipamentos[N].equipamento = { equipamento, defeitos, solucao, laudo, marca, modelo, serie }
     $equipamentosExtrato = [];

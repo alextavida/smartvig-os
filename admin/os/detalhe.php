@@ -109,18 +109,21 @@ function inicialTecnico(string $nome): string
 
 <div id="alertaDetalhe"></div>
 
-<?php if ($os['gc_os_id']): ?>
-<div class="card" id="painel-gc" style="border-left:4px solid #1d4ed8;">
-  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
-    <strong style="color:#1d4ed8;">Dados do GestãoClick (ao vivo)</strong>
-    <span id="gc-status" style="font-size:12px;color:#64748b;">Carregando...</span>
-  </div>
-  <div id="gc-dados" style="margin-top:12px;font-size:13px;"></div>
-</div>
-<?php endif; ?>
-
 <div class="card">
   <h3 style="margin-top:0;">OS #<?= (int) $os['id'] ?> &middot; <?= htmlspecialchars($os['cliente_nome'] ?? '-') ?></h3>
+
+  <?php if ($os['gc_os_id']): ?>
+  <!-- Faixa de equipamento GC — preenchida via JS -->
+  <div id="gc-equip-box" style="display:none; background:#f0f9ff; border:1px solid #bae6fd; border-radius:8px; padding:14px; margin-bottom:18px; font-size:13px;">
+    <div style="font-size:11px;color:#0369a1;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:6px;">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      EQUIPAMENTO / INFORMAÇÕES DO GESTÃOCLICK
+      <span id="gc-status" style="font-weight:400;color:#64748b;margin-left:8px;">Carregando...</span>
+    </div>
+    <div id="gc-equip-content"></div>
+  </div>
+  <?php endif; ?>
+
   <form id="formAtualizarOs">
     <div class="linha-form">
       <div class="campo"><label>Cliente</label><input type="text" name="cliente_nome" value="<?= htmlspecialchars($os['cliente_nome'] ?? '') ?>"></div>
@@ -153,6 +156,17 @@ function inicialTecnico(string $nome): string
     <button type="submit" class="btn btn-primario"><?= ic('check', 15) ?> Salvar alteracoes</button>
   </form>
 </div>
+
+<?php if ($os['gc_os_id']): ?>
+<!-- Produtos e Serviços do GC — preenchido via JS -->
+<div id="card-gc-produtos" class="card" style="display:none;">
+  <h3 style="margin-top:0;">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+    Produtos e Serviços (GestãoClick)
+  </h3>
+  <div id="gc-produtos-content"></div>
+</div>
+<?php endif; ?>
 
 <div class="card">
   <h3 style="margin-top:0;"><?= ic('tecnicos') ?> Tecnicos atribuidos</h3>
@@ -242,131 +256,151 @@ function inicialTecnico(string $nome): string
 const OS_ID    = <?= (int) $os['id'] ?>;
 const GC_OS_ID = <?= (int) ($os['gc_os_id'] ?? 0) ?>;
 
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
 // Carrega dados ao vivo do GestãoClick após api.js estar disponível (carregado no footer)
 document.addEventListener('DOMContentLoaded', function () {
 
 if (GC_OS_ID) {
   (async () => {
-    const statusEl = document.getElementById('gc-status');
-    const dadosEl  = document.getElementById('gc-dados');
+    const statusEl     = document.getElementById('gc-status');
+    const equipBox     = document.getElementById('gc-equip-box');
+    const equipContent = document.getElementById('gc-equip-content');
+    const cardProdutos = document.getElementById('card-gc-produtos');
+    const prodContent  = document.getElementById('gc-produtos-content');
+
     try {
-      const d = await apiGet('/os/dados-gc.php?gc_os_id=' + GC_OS_ID);
+      const d  = await apiGet('/os/dados-gc.php?gc_os_id=' + GC_OS_ID);
       const ex = d.extraido || {};
-      const raw = d.raw || {};
 
-      statusEl.style.color = '#16803c';
-      statusEl.textContent = 'Sincronizado com GC';
+      statusEl.style.color = '#0369a1';
+      statusEl.textContent = 'Dados GC carregados ✓';
 
-      // Renderiza painel de dados GC
+      // — AUTO PREENCHE campos do formulário local se estiverem vazios —
+      const fill = (name, val) => {
+        const el = document.querySelector(`[name="${name}"]`);
+        if (el && !el.value.trim() && val) { el.value = val; }
+      };
+      fill('cliente_nome',      ex.cliente_nome);
+      fill('cliente_telefone',  ex.cliente_telefone);
+      fill('cliente_endereco',  ex.cliente_endereco);
+      if (!document.querySelector('[name="observacoes"]').value.trim()) {
+        const eqs0 = (ex.equipamentos || [])[0];
+        if (eqs0) {
+          const partes = [];
+          if (eqs0.tipo)     { partes.push('Equipamento: ' + eqs0.tipo); }
+          if (eqs0.defeitos) { partes.push('Defeito: ' + eqs0.defeitos); }
+          if (partes.length) { document.querySelector('[name="observacoes"]').value = partes.join('\n'); }
+        }
+      }
+
+      // — SEÇÃO DE EQUIPAMENTOS inline no card principal —
       const cel = (label, val) => val
-        ? `<div style="margin-bottom:6px;"><span style="color:#64748b;min-width:120px;display:inline-block;">${label}:</span> <strong>${escHtml(String(val))}</strong></div>`
+        ? `<span style="color:#64748b;">${label}:</span> <strong>${escHtml(String(val))}</strong>`
         : '';
 
-      let html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 24px;">';
-      html += cel('Cliente', ex.cliente_nome);
-      html += cel('Código OS', ex.codigo);
-      html += cel('Telefone', ex.cliente_telefone);
-      html += cel('Data entrada', ex.data_entrada);
-      html += cel('Endereço', ex.cliente_endereco);
-      html += cel('Situação GC', ex.nome_situacao);
-      html += cel('Técnico GC', ex.nome_tecnico);
-      html += '</div>';
+      let equipHtml = '';
 
-      // Equipamentos (preenchidos pelo técnico ao finalizar OS)
-      const eqs = ex.equipamentos;
-      if (Array.isArray(eqs) && eqs.length > 0) {
-        eqs.forEach((eq, i) => {
-          html += `<div style="margin-top:14px;border-top:1px solid #e2e8f0;padding-top:12px;">
-            <strong style="font-size:13px;">🔧 Equipamento ${eqs.length > 1 ? '#' + (i+1) : ''}</strong>
-            <div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:0 24px;font-size:13px;">
-              ${eq.tipo    ? cel('Tipo',   eq.tipo)   : ''}
-              ${eq.marca   ? cel('Marca',  eq.marca)  : ''}
-              ${eq.modelo  ? cel('Modelo', eq.modelo) : ''}
-              ${eq.serie   ? cel('Série',  eq.serie)  : ''}
-            </div>`;
-          if (eq.defeitos) {
-            html += `<div style="margin-top:8px;background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:8px 12px;">
-              <div style="font-size:11px;color:#92400e;font-weight:700;margin-bottom:4px;">DEFEITO RELATADO</div>
-              <div style="font-size:13px;white-space:pre-wrap;">${escHtml(eq.defeitos)}</div>
-            </div>`;
-          }
-          if (eq.solucao) {
-            html += `<div style="margin-top:6px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:8px 12px;">
-              <div style="font-size:11px;color:#166534;font-weight:700;margin-bottom:4px;">SOLUÇÃO APLICADA</div>
-              <div style="font-size:13px;white-space:pre-wrap;">${escHtml(eq.solucao)}</div>
-            </div>`;
-          }
-          if (eq.laudo) {
-            html += `<div style="margin-top:6px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:8px 12px;">
-              <div style="font-size:11px;color:#1d4ed8;font-weight:700;margin-bottom:4px;">LAUDO TÉCNICO</div>
-              <div style="font-size:13px;white-space:pre-wrap;">${escHtml(eq.laudo)}</div>
-            </div>`;
-          }
-          html += '</div>';
-        });
+      // Informações gerais GC (código, situação, técnico, data)
+      const gcMeta = [
+        ex.codigo       ? `<div style="margin-bottom:4px;">${cel('Código GC', ex.codigo)}</div>` : '',
+        ex.nome_situacao ? `<div style="margin-bottom:4px;">${cel('Situação GC', ex.nome_situacao)}</div>` : '',
+        ex.nome_tecnico  ? `<div style="margin-bottom:4px;">${cel('Técnico GC', ex.nome_tecnico)}</div>` : '',
+        ex.data_entrada  ? `<div style="margin-bottom:4px;">${cel('Data entrada', ex.data_entrada)}</div>` : '',
+      ].filter(Boolean).join('');
+      if (gcMeta) {
+        equipHtml += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 24px;margin-bottom:12px;">${gcMeta}</div>`;
       }
 
-      // Observações da OS no GC
+      // Equipamentos
+      const eqs = ex.equipamentos || [];
+      eqs.forEach((eq, i) => {
+        equipHtml += `<div style="border-top:1px solid #bae6fd;padding-top:10px;margin-top:10px;">
+          <div style="font-weight:700;font-size:12px;margin-bottom:8px;">🔧 EQUIPAMENTO${eqs.length > 1 ? ' #' + (i+1) : ''}</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 24px;">
+            ${eq.tipo   ? `<div style="margin-bottom:4px;">${cel('Tipo', eq.tipo)}</div>` : ''}
+            ${eq.marca  ? `<div style="margin-bottom:4px;">${cel('Marca', eq.marca)}</div>` : ''}
+            ${eq.modelo ? `<div style="margin-bottom:4px;">${cel('Modelo', eq.modelo)}</div>` : ''}
+            ${eq.serie  ? `<div style="margin-bottom:4px;">${cel('Série', eq.serie)}</div>` : ''}
+          </div>`;
+        if (eq.defeitos) {
+          equipHtml += `<div style="margin-top:8px;background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:8px 12px;">
+            <div style="font-size:10px;color:#92400e;font-weight:700;margin-bottom:3px;">DEFEITO RELATADO</div>
+            <div style="font-size:13px;white-space:pre-wrap;">${escHtml(eq.defeitos)}</div>
+          </div>`;
+        }
+        if (eq.solucao) {
+          equipHtml += `<div style="margin-top:6px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:8px 12px;">
+            <div style="font-size:10px;color:#166534;font-weight:700;margin-bottom:3px;">SOLUÇÃO APLICADA</div>
+            <div style="font-size:13px;white-space:pre-wrap;">${escHtml(eq.solucao)}</div>
+          </div>`;
+        }
+        if (eq.laudo) {
+          equipHtml += `<div style="margin-top:6px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:8px 12px;">
+            <div style="font-size:10px;color:#1d4ed8;font-weight:700;margin-bottom:3px;">LAUDO TÉCNICO</div>
+            <div style="font-size:13px;white-space:pre-wrap;">${escHtml(eq.laudo)}</div>
+          </div>`;
+        }
+        equipHtml += '</div>';
+      });
+
       if (ex.observacoes) {
-        html += `<div style="margin-top:10px;">${cel('Observações GC', ex.observacoes)}</div>`;
+        equipHtml += `<div style="margin-top:10px;border-top:1px solid #bae6fd;padding-top:10px;">
+          <span style="color:#64748b;">Observações GC:</span> <span>${escHtml(ex.observacoes)}</span>
+        </div>`;
       }
 
-      // Serviços
-      const servs = ex.servicos;
-      if (Array.isArray(servs) && servs.length > 0) {
-        html += '<div style="margin-top:10px;"><strong>Serviços do GC:</strong><table style="width:100%;margin-top:6px;font-size:12px;"><thead><tr style="text-align:left;"><th>Serviço</th><th>Qtd</th><th>Valor</th></tr></thead><tbody>';
-        servs.forEach(s => {
-          html += `<tr><td>${escHtml(String(s.nome || s.descricao || s.servico || ''))}</td><td>${s.quantidade || '-'}</td><td>${s.valor || s.preco || '-'}</td></tr>`;
+      if (equipHtml) {
+        equipContent.innerHTML = equipHtml;
+        equipBox.style.display = 'block';
+      }
+
+      // — CARD DE PRODUTOS/SERVIÇOS GC —
+      const servicos = ex.servicos || [];
+      const produtos  = ex.produtos || [];
+      let prodHtml = '';
+
+      if (servicos.length > 0) {
+        prodHtml += '<div style="margin-bottom:14px;"><strong style="font-size:13px;">Serviços</strong><table style="width:100%;margin-top:8px;font-size:13px;"><thead><tr style="text-align:left;border-bottom:2px solid var(--cinza-100);"><th style="padding:6px 8px;">Serviço</th><th style="padding:6px 8px;">Qtd</th><th style="padding:6px 8px;">Valor</th></tr></thead><tbody>';
+        servicos.forEach(s => {
+          prodHtml += `<tr style="border-bottom:1px solid var(--cinza-100);">
+            <td style="padding:6px 8px;">${escHtml(String(s.nome || ''))}</td>
+            <td style="padding:6px 8px;">${s.quantidade ?? '-'}</td>
+            <td style="padding:6px 8px;">R$ ${parseFloat(s.valor || 0).toFixed(2).replace('.', ',')}</td>
+          </tr>`;
         });
-        html += '</tbody></table></div>';
+        prodHtml += '</tbody></table></div>';
       }
 
-      // Produtos/peças
-      const prods = ex.produtos;
-      if (Array.isArray(prods) && prods.length > 0) {
-        html += '<div style="margin-top:10px;"><strong>Produtos/Peças do GC:</strong><table style="width:100%;margin-top:6px;font-size:12px;"><thead><tr style="text-align:left;"><th>Nome</th><th>Qtd</th><th>Valor</th></tr></thead><tbody>';
-        prods.forEach(p => {
-          const nome = p.nome || p.descricao || p.produto || JSON.stringify(p);
-          html += `<tr><td>${escHtml(String(nome))}</td><td>${p.quantidade || p.qtd || '-'}</td><td>${p.valor || p.preco || p.valor_venda || '-'}</td></tr>`;
+      if (produtos.length > 0) {
+        prodHtml += '<div><strong style="font-size:13px;">Produtos / Peças</strong><table style="width:100%;margin-top:8px;font-size:13px;"><thead><tr style="text-align:left;border-bottom:2px solid var(--cinza-100);"><th style="padding:6px 8px;">Nome</th><th style="padding:6px 8px;">Qtd</th><th style="padding:6px 8px;">Valor unit.</th></tr></thead><tbody>';
+        produtos.forEach(p => {
+          prodHtml += `<tr style="border-bottom:1px solid var(--cinza-100);">
+            <td style="padding:6px 8px;">${escHtml(String(p.nome || ''))}</td>
+            <td style="padding:6px 8px;">${p.quantidade ?? '-'}</td>
+            <td style="padding:6px 8px;">R$ ${parseFloat(p.valor_venda || 0).toFixed(2).replace('.', ',')}</td>
+          </tr>`;
         });
-        html += '</tbody></table></div>';
+        prodHtml += '</tbody></table></div>';
       }
 
-      // Raw JSON colapsável
-      html += `<details style="margin-top:12px;"><summary style="cursor:pointer;font-size:11px;color:#94a3b8;">Ver JSON completo do GC (${d.chaves?.length || 0} campos)</summary>
-        <pre style="font-size:11px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:8px;max-height:200px;overflow:auto;margin-top:4px;">${escHtml(JSON.stringify(raw, null, 2))}</pre>
-      </details>`;
-
-      dadosEl.innerHTML = html || '<span style="color:#94a3b8;">Sem dados detalhados disponíveis no GC.</span>';
-
-      // Preenche campos do formulário local se estiverem vazios
-      const fill = (name, val) => { const el = document.querySelector(`[name="${name}"]`); if (el && !el.value.trim() && val) el.value = val; };
-      fill('cliente_nome', ex.cliente_nome);
-      fill('cliente_telefone', ex.cliente_telefone);
-      fill('cliente_endereco', ex.cliente_endereco);
-      // Preenche observacoes com defeito+tipo se vazio
-      if (Array.isArray(eqs) && eqs.length > 0 && eqs[0].defeitos) {
-        const eq0 = eqs[0];
-        const textoInicial = [
-          eq0.tipo    ? 'Equipamento: ' + eq0.tipo    : '',
-          eq0.defeitos ? 'Defeito: '     + eq0.defeitos : '',
-        ].filter(Boolean).join('\n');
-        fill('observacoes', textoInicial);
+      if (prodHtml) {
+        prodContent.innerHTML = prodHtml;
+        cardProdutos.style.display = 'block';
       }
 
     } catch (e) {
-      statusEl.style.color = '#c0392b';
-      statusEl.textContent = 'Erro ao buscar do GC: ' + e.message;
-      dadosEl.innerHTML = '';
+      if (statusEl) {
+        statusEl.style.color = '#c0392b';
+        statusEl.textContent = 'Erro GC: ' + e.message;
+      }
     }
   })();
 }
 
 }); // fim DOMContentLoaded
-
-function escHtml(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
 
 async function resyncOS() {
   const btn = document.getElementById('btn-resync');
