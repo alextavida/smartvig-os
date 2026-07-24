@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useCallback} from 'react';
+import React, {useState, useEffect, useCallback, useRef} from 'react';
 import {
   View,
   Text,
@@ -9,8 +9,10 @@ import {
   ActivityIndicator,
   ScrollView,
 } from 'react-native';
+import Geolocation from '@react-native-community/geolocation';
 import {NativeStackScreenProps} from '@react-navigation/native-stack';
 import {listarOs} from '../api/os';
+import {atualizarGps} from '../api/gps';
 import {OS} from '../types';
 import {OsCard} from '../components/OsCard';
 import {useAuth} from '../hooks/useAuth';
@@ -39,6 +41,26 @@ export function HomeScreen({navigation}: Props) {
   const [erro, setErro] = useState('');
 
   const isGestor = usuario?.perfil === 'gestor';
+  const gpsTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Técnicos enviam GPS a cada 2 minutos enquanto o app está aberto (sem OS ativa)
+  useEffect(() => {
+    if (isGestor) {return;}
+    function enviarGps() {
+      Geolocation.getCurrentPosition(
+        pos => {
+          atualizarGps(pos.coords.latitude, pos.coords.longitude).catch(() => {});
+        },
+        () => {},
+        {enableHighAccuracy: false, timeout: 15000},
+      );
+    }
+    enviarGps();
+    gpsTimer.current = setInterval(enviarGps, 120_000);
+    return () => {
+      if (gpsTimer.current) {clearInterval(gpsTimer.current);}
+    };
+  }, [isGestor]);
 
   const carregar = useCallback(async (status: string) => {
     setErro('');

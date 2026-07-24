@@ -108,7 +108,7 @@ export function OsDetailScreen({route, navigation}: Props) {
     function enviarGps() {
       Geolocation.getCurrentPosition(
         pos => {
-          atualizarGps(osId, pos.coords.latitude, pos.coords.longitude).catch(() => {});
+          atualizarGps(pos.coords.latitude, pos.coords.longitude, osId).catch(() => {});
         },
         () => {},
         {enableHighAccuracy: true, timeout: 15000},

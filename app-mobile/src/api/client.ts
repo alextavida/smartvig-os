@@ -48,7 +48,7 @@ async function requisitar<T>(
 
   if (!resposta.ok || dados?.sucesso === false) {
     throw new ApiError(
-      dados?.mensagem || `Erro HTTP ${resposta.status}`,
+      dados?.erro || dados?.mensagem || `Erro HTTP ${resposta.status}`,
       resposta.status,
     );
   }
@@ -95,7 +95,7 @@ export async function apiUpload<T>(
 
   if (!resposta.ok || dados?.sucesso === false) {
     throw new ApiError(
-      dados?.mensagem || `Erro HTTP ${resposta.status}`,
+      dados?.erro || dados?.mensagem || `Erro HTTP ${resposta.status}`,
       resposta.status,
     );
   }
