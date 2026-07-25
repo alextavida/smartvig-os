@@ -206,6 +206,24 @@ function inicialTecnico(string $nome): string
   </div>
   <?php endif; ?>
 
+  <div style="margin-bottom:12px;">
+    <button type="button" onclick="abrirSugestaoTecnico()" class="btn btn-sm" style="background:#f0fdf4;color:#16803c;border:1px solid #bbf7d0;">
+      🎯 Sugerir técnico mais próximo
+    </button>
+  </div>
+
+  <!-- Modal sugestão de técnico -->
+  <div id="modal-sugestao" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;align-items:center;justify-content:center;">
+    <div style="background:#fff;border-radius:14px;padding:24px;max-width:500px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 16px 48px rgba(0,0,0,.25);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <h3 style="margin:0;font-size:15px;">🎯 Distribuição Automática</h3>
+        <button onclick="document.getElementById('modal-sugestao').style.display='none'"
+                style="background:none;border:none;cursor:pointer;font-size:20px;color:#64748b;">×</button>
+      </div>
+      <div id="sugestao-lista" style="font-size:13px;color:#64748b;">Carregando...</div>
+    </div>
+  </div>
+
   <form id="formTecnicos">
     <?php foreach ($todosTecnicos as $t): ?>
       <?php
@@ -458,6 +476,54 @@ document.getElementById('formAtualizarOs').addEventListener('submit', async func
     alertaBox.innerHTML = '<div class="alerta alerta-erro">Erro: ' + e.message + '</div>';
   }
 });
+
+async function abrirSugestaoTecnico() {
+  const modal = document.getElementById('modal-sugestao');
+  const lista = document.getElementById('sugestao-lista');
+  modal.style.display = 'flex';
+  lista.innerHTML = 'Carregando...';
+  try {
+    const dados = await apiGet('/os/sugerir_tecnico.php?os_id=' + OS_ID);
+    const tecs = dados.tecnicos || [];
+    if (!tecs.length) { lista.innerHTML = 'Nenhum técnico cadastrado.'; return; }
+    lista.innerHTML = tecs.map((t, i) => `
+      <div style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:8px;background:${i===0?'#f0fdf4':'#f8fafc'};margin-bottom:8px;border:1px solid ${i===0?'#bbf7d0':'#e2e8f0'};">
+        <div style="width:32px;height:32px;border-radius:50%;background:${t.livre?'#16803c':'#94a3b8'};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex-shrink:0;">
+          ${i+1}
+        </div>
+        <div style="flex:1;">
+          <div style="font-weight:700;color:#1c2430;">${escHtml(t.nome)}</div>
+          <div style="font-size:11px;color:#64748b;margin-top:2px;">
+            ${t.livre ? '<span style="color:#16803c;font-weight:600;">✓ Livre</span>' : `<span style="color:#dc2626;">⚡ ${t.os_ativas} OS ativa(s)</span>`}
+            ${t.gps_ativo ? ' &bull; 📍 GPS ativo' : (t.gps_min_atras ? ` &bull; GPS ${t.gps_min_atras}min atrás` : ' &bull; Sem GPS')}
+            ${t.distancia_km !== null ? ` &bull; ~${t.distancia_km}km` : ''}
+          </div>
+        </div>
+        <button onclick="atribuirSugestao(${t.id})"
+                class="btn btn-secundario btn-sm" style="${i===0?'background:#16803c;color:#fff;border-color:#16803c;':''}">
+          ${i===0 ? '✓ Atribuir' : 'Atribuir'}
+        </button>
+      </div>`).join('');
+  } catch (e) {
+    lista.innerHTML = 'Erro: ' + e.message;
+  }
+}
+
+function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+async function atribuirSugestao(tecId) {
+  try {
+    await apiPost('/os/atribuir_tecnicos.php', {
+      os_id: OS_ID,
+      tecnicos: [{tecnico_id: tecId, responsavel: true}]
+    });
+    document.getElementById('modal-sugestao').style.display = 'none';
+    document.getElementById('alertaDetalhe').innerHTML = '<div class="alerta alerta-sucesso">Técnico atribuído com sucesso!</div>';
+    setTimeout(() => window.location.reload(), 800);
+  } catch (e) {
+    alert('Erro: ' + e.message);
+  }
+}
 
 document.getElementById('formTecnicos').addEventListener('submit', async function (ev) {
   ev.preventDefault();

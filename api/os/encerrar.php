@@ -39,6 +39,13 @@ try {
     registrarHistorico($pdo, $osId, (int) $payload['usuario_id'], 'os_encerrada', $laudoFinal);
     notificarGestores($pdo, $osId, 'encerrada', 'OS encerrada', 'Tecnico ' . $payload['nome'] . ' finalizou o atendimento da OS #' . $osId);
 
+    // Gera token NPS para avaliacao do cliente (se ainda nao tiver)
+    if (!$os['nps_token']) {
+        $npsToken = bin2hex(random_bytes(16));
+        $pdo->prepare('UPDATE ordens_servico SET nps_token = :t WHERE id = :id')
+            ->execute([':t' => $npsToken, ':id' => $osId]);
+    }
+
     $erroSincronizacao = null;
     if ($os['gc_os_id'] > 0) {
         try {
