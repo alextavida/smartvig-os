@@ -177,6 +177,10 @@ export function ProfileScreen() {
           value={senhaAtual}
           onChangeText={setSenhaAtual}
           secureTextEntry
+          autoCorrect={false}
+          autoCapitalize="none"
+          autoComplete="current-password"
+          textContentType="password"
           placeholder="Senha atual"
           placeholderTextColor={CORES.cinza300}
           editable={!salvando}
@@ -188,6 +192,10 @@ export function ProfileScreen() {
           value={novaSenha}
           onChangeText={setNovaSenha}
           secureTextEntry
+          autoCorrect={false}
+          autoCapitalize="none"
+          autoComplete="new-password"
+          textContentType="newPassword"
           placeholder="Mínimo 6 caracteres"
           placeholderTextColor={CORES.cinza300}
           editable={!salvando}
@@ -199,6 +207,10 @@ export function ProfileScreen() {
           value={confirmar}
           onChangeText={setConfirmar}
           secureTextEntry
+          autoCorrect={false}
+          autoCapitalize="none"
+          autoComplete="new-password"
+          textContentType="newPassword"
           placeholder="Repita a nova senha"
           placeholderTextColor={CORES.cinza300}
           editable={!salvando}

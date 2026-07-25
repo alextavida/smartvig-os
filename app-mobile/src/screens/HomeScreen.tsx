@@ -11,6 +11,7 @@ import {
   TextInput,
 } from 'react-native';
 import Geolocation from '@react-native-community/geolocation';
+import {useNavigation} from '@react-navigation/native';
 import {NativeStackScreenProps} from '@react-navigation/native-stack';
 import {listarOs} from '../api/os';
 import {atualizarGps} from '../api/gps';
@@ -18,6 +19,7 @@ import {OS} from '../types';
 import {OsCard} from '../components/OsCard';
 import {useAuth} from '../hooks/useAuth';
 import {useNotificacoes} from '../hooks/useNotificacoes';
+import {useOfflineQueue} from '../hooks/useOfflineQueue';
 import {CORES} from '../config';
 import {RootStackParamList} from '../navigation';
 
@@ -35,6 +37,9 @@ const ABAS = [
 export function HomeScreen({navigation}: Props) {
   const {usuario} = useAuth();
   const {naoLidas} = useNotificacoes(true);
+  const {pendentes} = useOfflineQueue();
+  const nav = useNavigation<any>();
+
   const [abaAtiva, setAbaAtiva] = useState('');
   const [osList, setOsList] = useState<OS[]>([]);
   const [carregando, setCarregando] = useState(true);
@@ -45,7 +50,6 @@ export function HomeScreen({navigation}: Props) {
   const isGestor = usuario?.perfil === 'gestor';
   const gpsTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Técnicos enviam GPS a cada 2 minutos enquanto o app está aberto (sem OS ativa)
   useEffect(() => {
     if (isGestor) {return;}
     function enviarGps() {
@@ -74,7 +78,6 @@ export function HomeScreen({navigation}: Props) {
     }
   }, []);
 
-  // Filtro local por busca (cliente_nome ou código)
   const osListFiltrada = useMemo(() => {
     if (!busca.trim()) { return osList; }
     const termo = busca.toLowerCase().trim();
@@ -102,6 +105,11 @@ export function HomeScreen({navigation}: Props) {
     .map(p => p?.[0] ?? '')
     .join('')
     .toUpperCase() || 'U';
+
+  // OS em andamento pelo técnico (exibida no topo como card de destaque)
+  const osEmAndamento = !isGestor
+    ? osList.find(o => o.situacao_local === 'em_andamento')
+    : undefined;
 
   return (
     <View style={estilos.container}>
@@ -134,7 +142,39 @@ export function HomeScreen({navigation}: Props) {
         </View>
       </View>
 
-      {/* Resumo rápido para gestor */}
+      {/* Banner offline (técnico com ações pendentes) */}
+      {!isGestor && pendentes.length > 0 && (
+        <View style={estilos.bannerOffline}>
+          <Text style={estilos.bannerOfflineIcon}>📡</Text>
+          <Text style={estilos.bannerOfflineText}>
+            {pendentes.length} ação{pendentes.length > 1 ? 'ões' : ''} aguardando sincronização
+          </Text>
+        </View>
+      )}
+
+      {/* Card OS em andamento (técnico) */}
+      {!isGestor && osEmAndamento && (
+        <TouchableOpacity
+          style={estilos.cardAtiva}
+          onPress={() => navigation.navigate('OsDetail', {osId: osEmAndamento.id})}
+          activeOpacity={0.85}>
+          <View style={estilos.cardAtivaRow}>
+            <View style={estilos.cardAtivaIndicador} />
+            <View style={{flex: 1}}>
+              <Text style={estilos.cardAtivaLabel}>OS em andamento</Text>
+              <Text style={estilos.cardAtivaNome} numberOfLines={1}>
+                {osEmAndamento.cliente_nome ?? `OS #${osEmAndamento.id}`}
+              </Text>
+              {osEmAndamento.codigo ? (
+                <Text style={estilos.cardAtivaCodigo}>{osEmAndamento.codigo}</Text>
+              ) : null}
+            </View>
+            <Text style={estilos.cardAtivaChevron}>›</Text>
+          </View>
+        </TouchableOpacity>
+      )}
+
+      {/* Resumo rápido (gestor) */}
       {isGestor && osList.length > 0 && (
         <View style={estilos.resumoRow}>
           {[
@@ -148,6 +188,18 @@ export function HomeScreen({navigation}: Props) {
             </View>
           ))}
         </View>
+      )}
+
+      {/* Acesso rápido para técnico: Produtividade */}
+      {!isGestor && !carregando && (
+        <TouchableOpacity
+          style={estilos.acessoProdutividade}
+          onPress={() => nav.navigate('Produtividade')}
+          activeOpacity={0.8}>
+          <Text style={estilos.acessoProdutividadeIcon}>📊</Text>
+          <Text style={estilos.acessoProdutividadeText}>Ver minha produtividade</Text>
+          <Text style={estilos.acessoProdutividadeChevron}>›</Text>
+        </TouchableOpacity>
       )}
 
       {/* Busca */}
@@ -284,6 +336,67 @@ const estilos = StyleSheet.create({
   },
   avatarGestor: {backgroundColor: '#b8860b'},
   avatarText: {color: '#fff', fontWeight: '700', fontSize: 14},
+
+  // Banner offline
+  bannerOffline: {
+    backgroundColor: '#fff3cd',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    gap: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ffc107',
+  },
+  bannerOfflineIcon: {fontSize: 16},
+  bannerOfflineText: {flex: 1, fontSize: 13, fontWeight: '600', color: '#856404'},
+
+  // Card OS ativa
+  cardAtiva: {
+    backgroundColor: CORES.branco,
+    marginHorizontal: 12,
+    marginTop: 10,
+    marginBottom: 2,
+    borderRadius: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: CORES.amarelo,
+    shadowColor: '#10284A',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  cardAtivaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 10,
+  },
+  cardAtivaIndicador: {
+    width: 10, height: 10, borderRadius: 5,
+    backgroundColor: CORES.amarelo,
+  },
+  cardAtivaLabel: {fontSize: 10, fontWeight: '700', color: CORES.cinza500, textTransform: 'uppercase', letterSpacing: 0.5},
+  cardAtivaNome: {fontSize: 15, fontWeight: '700', color: CORES.cinza900, marginTop: 2},
+  cardAtivaCodigo: {fontSize: 12, color: CORES.cinza500, marginTop: 1},
+  cardAtivaChevron: {fontSize: 22, color: CORES.cinza300, fontWeight: '300'},
+
+  // Acesso rápido produtividade
+  acessoProdutividade: {
+    backgroundColor: CORES.azul100,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    gap: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: CORES.cinza100,
+  },
+  acessoProdutividadeIcon: {fontSize: 16},
+  acessoProdutividadeText: {flex: 1, fontSize: 13, fontWeight: '600', color: CORES.azul700},
+  acessoProdutividadeChevron: {fontSize: 20, color: CORES.azul700, fontWeight: '300'},
+
   resumoRow: {
     backgroundColor: CORES.branco, flexDirection: 'row',
     paddingVertical: 12, paddingHorizontal: 20,

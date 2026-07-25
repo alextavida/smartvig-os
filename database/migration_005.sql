@@ -7,7 +7,7 @@ ALTER TABLE ordens_servico
   COMMENT 'Token único para acesso público ao portal do cliente',
   ADD UNIQUE INDEX IF NOT EXISTS idx_portal_token (portal_token);
 
--- Preenche portal_token para OS existentes que ainda não têm
+-- Preenche portal_token para OS existentes que ainda nao tem
 UPDATE ordens_servico
-   SET portal_token = LOWER(HEX(RANDOM_BYTES(16)))
+   SET portal_token = REPLACE(UUID(), '-', '')
  WHERE portal_token IS NULL;
