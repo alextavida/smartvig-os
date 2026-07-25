@@ -202,6 +202,20 @@ export function HomeScreen({navigation}: Props) {
         </TouchableOpacity>
       )}
 
+      {/* Acesso rápido para gestor: Mapa de técnicos */}
+      {isGestor && !carregando && (
+        <TouchableOpacity
+          style={[estilos.acessoProdutividade, {backgroundColor: '#eff6ff'}]}
+          onPress={() => nav.navigate('MapaTecnicos')}
+          activeOpacity={0.8}>
+          <Text style={estilos.acessoProdutividadeIcon}>📍</Text>
+          <Text style={[estilos.acessoProdutividadeText, {color: CORES.azul700}]}>
+            Mapa de técnicos em campo
+          </Text>
+          <Text style={[estilos.acessoProdutividadeChevron, {color: CORES.azul700}]}>›</Text>
+        </TouchableOpacity>
+      )}
+
       {/* Busca */}
       <View style={estilos.buscaContainer}>
         <Text style={estilos.buscaIcone}>🔍</Text>

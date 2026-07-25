@@ -110,7 +110,7 @@ $fotoPerfil = $usuarioAtual['foto_perfil'] ?? null;
         <?php endif; ?>
         <div>
           <div style="font-size:12px; font-weight:600;"><?= htmlspecialchars($usuarioAtual['nome']) ?></div>
-          <div style="font-size:10px; opacity:.7;"><?= $usuarioAtual['perfil'] === 'gestor' ? 'Gestor' : 'Tecnico' ?></div>
+          <div style="font-size:10px; opacity:.7;"><?= match($usuarioAtual['perfil']) { 'gestor' => 'Gestor', 'supervisor' => 'Supervisor', default => 'Tecnico' } ?></div>
         </div>
       </div>
       <a href="/app-tecnicos/logout.php" style="color:rgba(255,255,255,.8); font-size:12px; display:flex; align-items:center; gap:6px;">

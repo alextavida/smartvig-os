@@ -34,7 +34,8 @@ function exigirLoginWeb(array $perfisPermitidos = []): array
 
     if (!empty($perfisPermitidos) && !in_array($_SESSION['usuario_perfil'], $perfisPermitidos, true)) {
         $caminhoBase = obterCaminhoBaseApp();
-        $destino = $_SESSION['usuario_perfil'] === 'gestor' ? '/admin/' : '/tecnico/';
+        $isAdmin = in_array($_SESSION['usuario_perfil'], ['gestor', 'supervisor'], true);
+        $destino = $isAdmin ? '/admin/' : '/tecnico/';
         header('Location: ' . $caminhoBase . $destino);
         exit;
     }

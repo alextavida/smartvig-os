@@ -10,6 +10,7 @@ import {OsDetailScreen} from '../screens/OsDetailScreen';
 import {ProfileScreen} from '../screens/ProfileScreen';
 import {CreateOsScreen} from '../screens/CreateOsScreen';
 import {ProdutividadeScreen} from '../screens/ProdutividadeScreen';
+import {MapaTecnicosScreen} from '../screens/MapaTecnicosScreen';
 import {useOfflineQueue} from '../hooks/useOfflineQueue';
 import {CORES} from '../config';
 
@@ -18,6 +19,7 @@ export type RootStackParamList = {
   App: undefined;
   OsDetail: {osId: number};
   CreateOs: undefined;
+  MapaTecnicos: undefined;
 };
 
 export type AppTabParamList = {
@@ -135,6 +137,13 @@ export function Navigation() {
                 headerTintColor: CORES.azul700,
                 headerStyle: {backgroundColor: CORES.branco},
                 headerTitleStyle: {fontWeight: '800', color: CORES.cinza900, fontSize: 16},
+              }}
+            />
+            <RootStack.Screen
+              name="MapaTecnicos"
+              component={MapaTecnicosScreen}
+              options={{
+                headerShown: false,
               }}
             />
           </>

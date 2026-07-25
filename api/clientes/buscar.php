@@ -18,7 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 }
 
 $payload = exigirAutenticacao();
-exigirPerfil($payload, ['gestor']);
+exigirPerfil($payload, ['gestor', 'supervisor']);
 
 $busca = trim((string) ($_GET['busca'] ?? ''));
 

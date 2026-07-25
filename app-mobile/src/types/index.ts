@@ -123,3 +123,14 @@ export interface ProdutoGC {
   nome: string;
   valor_venda: number;
 }
+
+export interface GpsTecnico {
+  tecnico_id: number;
+  tecnico_nome: string;
+  os_id: number | null;
+  cliente_nome: string | null;
+  latitude: string | null;
+  longitude: string | null;
+  atualizado_em: string | null;
+  status_os: 'em_andamento' | 'disponivel';
+}

@@ -173,9 +173,9 @@ require_once __DIR__ . '/../../includes/header.php';
       listaDiv.classList.add('aberto');
       return;
     }
-    listaDiv.innerHTML = clientes.map(c => {
+    listaDiv.innerHTML = clientes.map((c, i) => {
       const end = (c.endereco || '').trim().replace(/^,\s*/, '').replace(/,\s*$/, '');
-      return `<div class="ac-item" data-json='${JSON.stringify(c)}'>
+      return `<div class="ac-item" data-idx="${i}">
         <div class="ac-nome">${escHtml(c.nome)}</div>
         <div class="ac-detalhe">${end ? escHtml(end) + '&nbsp;' : ''}${c.telefone ? escHtml(c.telefone) : ''}</div>
       </div>`;
@@ -183,7 +183,8 @@ require_once __DIR__ . '/../../includes/header.php';
     listaDiv.classList.add('aberto');
     listaDiv.querySelectorAll('.ac-item').forEach(el => {
       el.addEventListener('click', () => {
-        const c = JSON.parse(el.dataset.json);
+        const c = clientes[parseInt(el.dataset.idx, 10)];
+        if (!c) { return; }
         inputNome.value  = c.nome;
         inputGcId.value  = c.id || '';
         inputTel.value   = c.telefone || '';
@@ -276,9 +277,9 @@ function renderProdAc(id, produtos) {
     listaDiv.classList.add('aberto');
     return;
   }
-  listaDiv.innerHTML = produtos.map(p => {
+  listaDiv.innerHTML = produtos.map((p, i) => {
     const preco = p.valor_venda ? 'R$ ' + parseFloat(p.valor_venda).toLocaleString('pt-BR', {minimumFractionDigits:2}) : '';
-    return `<div class="prod-ac-item" data-json='${JSON.stringify(p)}'>
+    return `<div class="prod-ac-item" data-idx="${i}">
       <span class="prod-ac-nome">${escHtml(p.nome)}</span>
       ${preco ? `<span class="prod-ac-valor">${escHtml(preco)}</span>` : ''}
     </div>`;
@@ -286,7 +287,8 @@ function renderProdAc(id, produtos) {
   listaDiv.classList.add('aberto');
   listaDiv.querySelectorAll('.prod-ac-item').forEach(el => {
     el.addEventListener('click', () => {
-      const p = JSON.parse(el.dataset.json);
+      const p = produtos[parseInt(el.dataset.idx, 10)];
+      if (!p) { return; }
       const tr = document.getElementById('item-' + id);
       if (!tr) { return; }
       tr.querySelector('.item-desc').value = p.nome;

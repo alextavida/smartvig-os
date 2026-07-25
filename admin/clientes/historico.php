@@ -24,26 +24,22 @@ $nomeExato = '';
 if ($busca !== '') {
     $like = '%' . $busca . '%';
 
-    $total = (int) $pdo->prepare(
-        "SELECT COUNT(*) FROM ordens_servico WHERE cliente_nome LIKE :b"
-    )->execute(['b' => $like]) ? $pdo->prepare(
-        "SELECT COUNT(*) FROM ordens_servico WHERE cliente_nome LIKE :b"
-    )->execute(['b' => $like]) ?: 0 : 0;
-
     $stmtT = $pdo->prepare("SELECT COUNT(*) FROM ordens_servico WHERE cliente_nome LIKE :b");
     $stmtT->execute(['b' => $like]);
     $total = (int) $stmtT->fetchColumn();
 
     $stmt = $pdo->prepare(
-        "SELECT os.id, os.gc_os_id, os.codigo, os.cliente_nome, os.cliente_telefone,
+        "SELECT os.id, os.codigo, os.cliente_nome, os.cliente_telefone,
                 os.cliente_endereco, os.situacao_local, os.prioridade,
                 os.data_agendamento, os.data_conclusao, os.observacoes,
                 os.tempo_atendimento_segundos, os.nps_nota, os.nps_comentario, os.nps_respondido,
-                resp.nome AS tecnico_nome,
+                (SELECT u2.nome FROM os_tecnicos ot2
+                 INNER JOIN usuarios u2 ON u2.id = ot2.tecnico_id
+                 WHERE ot2.os_id = os.id AND ot2.responsavel = 1
+                 LIMIT 1) AS tecnico_nome,
                 (SELECT COUNT(*) FROM midias_os m WHERE m.os_id = os.id AND m.tipo = 'foto') AS total_fotos,
                 (SELECT COUNT(*) FROM midias_os m WHERE m.os_id = os.id AND m.tipo = 'assinatura') AS total_assinaturas
          FROM ordens_servico os
-         LEFT JOIN usuarios resp ON resp.id = os.tecnico_id
          WHERE os.cliente_nome LIKE :b
          ORDER BY os.criado_em DESC
          LIMIT :lim OFFSET :off"
