@@ -448,7 +448,7 @@ export function OsDetailScreen({route, navigation}: Props) {
                 disabled={salvando}
                 onPress={async () => {
                   if (!isOnline) {
-                    await enfileirar('iniciar', osId, {});
+                    await enfileirar({tipo: 'iniciar', os_id: osId, params: {}});
                     mostrarSucesso('Sem conexão — ação salva para sincronizar.');
                     return;
                   }
@@ -800,7 +800,7 @@ export function OsDetailScreen({route, navigation}: Props) {
                   if (!motivoPausa.trim()) {Alert.alert('Informe o motivo da pausa.'); return;}
                   if (!isOnline) {
                     await pararTimer();
-                    await enfileirar('pausar', osId, {motivo: motivoPausa});
+                    await enfileirar({tipo: 'pausar', os_id: osId, params: {motivo: motivoPausa}});
                     setModalPausar(false); setMotivoPausa('');
                     mostrarSucesso('Sem conexão — pausa salva para sincronizar.');
                     return;
@@ -902,7 +902,7 @@ export function OsDetailScreen({route, navigation}: Props) {
                   if (!laudoFinal.trim()) {Alert.alert('Informe o laudo final.'); return;}
                   if (!isOnline) {
                     await pararTimer();
-                    await enfileirar('encerrar', osId, {laudo: laudoFinal});
+                    await enfileirar({tipo: 'encerrar', os_id: osId, params: {laudo_final: laudoFinal}});
                     setModalEncerrar(false); setLaudoFinal('');
                     mostrarSucesso('Sem conexão — encerramento salvo para sincronizar.');
                     return;
