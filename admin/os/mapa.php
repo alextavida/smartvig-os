@@ -1,6 +1,6 @@
 <?php
 /**
- * Mapa ao vivo de tecnicos — Google Maps embed (sem API key).
+ * Mapa ao vivo de tecnicos — Google Maps embed.
  * Mostra TODOS os tecnicos com OS ativa, inclusive os sem GPS (offline).
  * Atualiza a lista a cada 15s; clicar em um tecnico exibe sua localizacao.
  */
@@ -14,17 +14,29 @@ require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <style>
-.mapa-layout { display:flex; gap:16px; min-height:520px; }
+.mapa-layout { display:flex; gap:16px; align-items:flex-start; }
 .mapa-wrap {
-  flex: 1; background:#e8edf2; border-radius:12px;
-  overflow:hidden; position:relative; min-height:480px;
+  flex:1; background:#e8edf2; border-radius:12px;
+  overflow:hidden; position:relative; min-height:520px;
 }
-#mapa-iframe { width:100%; height:100%; border:0; display:none; min-height:480px; }
+#mapa-iframe { width:100%; height:520px; border:0; display:none; }
 .mapa-placeholder {
   position:absolute; inset:0; display:flex; flex-direction:column;
   align-items:center; justify-content:center; color:#64748b; gap:12px;
   background:#f1f5f9; border-radius:12px;
 }
+.mapa-loading {
+  position:absolute; inset:0; display:none; flex-direction:column;
+  align-items:center; justify-content:center; gap:10px;
+  background:rgba(241,245,249,.92); border-radius:12px; z-index:10;
+}
+.mapa-spinner {
+  width:36px; height:36px; border:3px solid #cbd3dd;
+  border-top-color:#1462b0; border-radius:50%;
+  animation:spin .8s linear infinite;
+}
+@keyframes spin { to { transform:rotate(360deg); } }
+
 .mapa-sidebar {
   width:290px; flex-shrink:0; display:flex; flex-direction:column;
   gap:6px; overflow-y:auto; max-height:580px; padding-right:2px;
@@ -39,9 +51,7 @@ require_once __DIR__ . '/../../includes/header.php';
 .tec-card.sel    { background:#eff6ff; border-color:#1d4ed8; }
 .tec-card.offline-card { opacity:.75; cursor:default; }
 .tec-card.offline-card:hover { background:var(--cinza-100,#f1f5f9); border-color:transparent; }
-.status-dot {
-  width:10px; height:10px; border-radius:50%; flex-shrink:0; margin-top:4px;
-}
+.status-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; margin-top:4px; }
 .dot-online  { background:#16803c; box-shadow:0 0 0 3px #dcfce7; }
 .dot-offline { background:#94a3b8; box-shadow:0 0 0 3px #e2e8f0; }
 .badge-status {
@@ -50,10 +60,7 @@ require_once __DIR__ . '/../../includes/header.php';
 }
 .badge-online  { background:#dcfce7; color:#16803c; }
 .badge-offline { background:#f1f5f9; color:#64748b; border:1px solid #e2e8f0; }
-.legenda-row {
-  display:flex; align-items:center; gap:16px; font-size:12px;
-  color:#64748b; margin-bottom:12px; flex-wrap:wrap;
-}
+.legenda-row { display:flex; align-items:center; gap:16px; font-size:12px; color:#64748b; margin-bottom:12px; flex-wrap:wrap; }
 .legenda-item { display:flex; align-items:center; gap:6px; }
 .legenda-dot { width:10px; height:10px; border-radius:50%; }
 </style>
@@ -76,6 +83,7 @@ require_once __DIR__ . '/../../includes/header.php';
   <!-- Mapa -->
   <div class="card" style="padding:0;overflow:hidden;flex:1;">
     <div class="mapa-wrap" id="mapa-wrap">
+      <!-- Placeholder inicial -->
       <div class="mapa-placeholder" id="mapa-placeholder">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5">
           <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
@@ -85,8 +93,14 @@ require_once __DIR__ . '/../../includes/header.php';
           Selecione um técnico online para ver a localização no mapa.
         </span>
       </div>
-      <iframe id="mapa-iframe" src="" loading="lazy" allowfullscreen
-              referrerpolicy="no-referrer-when-downgrade"></iframe>
+      <!-- Overlay de carregamento -->
+      <div class="mapa-loading" id="mapa-loading">
+        <div class="mapa-spinner"></div>
+        <span style="font-size:13px;color:#64748b;font-weight:600;">Carregando mapa...</span>
+      </div>
+      <!-- iframe Google Maps -->
+      <iframe id="mapa-iframe" src="" allowfullscreen referrerpolicy="no-referrer-when-downgrade"
+              onload="onIframeLoad()"></iframe>
     </div>
   </div>
 
@@ -124,16 +138,28 @@ require_once __DIR__ . '/../../includes/header.php';
   function centrarMapa(lat, lng) {
     const iframe      = document.getElementById('mapa-iframe');
     const placeholder = document.getElementById('mapa-placeholder');
-    iframe.src = `https://maps.google.com/maps?q=${lat},${lng}&z=16&output=embed&hl=pt-BR&markers=${lat},${lng}`;
-    iframe.style.display = 'block';
+    const loading     = document.getElementById('mapa-loading');
+
+    // Mostra iframe + spinner de carregamento
     placeholder.style.display = 'none';
+    loading.style.display = 'flex';
+    iframe.style.display = 'block';
+    iframe.src = `https://maps.google.com/maps?q=${lat},${lng}&z=16&output=embed&hl=pt-BR`;
   }
+
+  // Chamado pelo onload do iframe
+  window.onIframeLoad = function () {
+    const loading = document.getElementById('mapa-loading');
+    if (loading) { loading.style.display = 'none'; }
+  };
 
   function mostrarSemLocalizacao() {
     const iframe      = document.getElementById('mapa-iframe');
     const placeholder = document.getElementById('mapa-placeholder');
+    const loading     = document.getElementById('mapa-loading');
     iframe.style.display = 'none';
     iframe.src = '';
+    loading.style.display = 'none';
     placeholder.style.display = 'flex';
     document.getElementById('placeholder-msg').textContent =
       'Este técnico está offline — localização não disponível.';
@@ -167,48 +193,40 @@ require_once __DIR__ . '/../../includes/header.php';
     }
 
     div.innerHTML = posicoes.map(p => {
-      const online  = isOnline(p);
-      const temGps  = temGpsValido(p);
-      const min     = minAtras(p.atualizado_em);
-      const isSel   = tecSelecionado == p.tecnico_id;
-      const offlineCard = !temGps;
-
-      const dotCls  = online ? 'dot-online' : 'dot-offline';
-      const badgeCls = online ? 'badge-online' : 'badge-offline';
-      const badgeTxt = online ? 'Online' : 'Offline';
+      const online   = isOnline(p);
+      const temGps   = temGpsValido(p);
+      const min      = minAtras(p.atualizado_em);
+      const isSel    = tecSelecionado == p.tecnico_id;
+      const offlineCd = !temGps;
 
       let tempoTxt = '';
-      if (online)        { tempoTxt = `Há ${min} min`; }
-      else if (min !== null && min < 1440) { tempoTxt = `${min} min atrás`; }
-      else if (p.atualizado_em) { tempoTxt = new Date(p.atualizado_em).toLocaleString('pt-BR'); }
-      else                 { tempoTxt = 'Sem GPS'; }
+      if (!p.atualizado_em)               { tempoTxt = 'Sem GPS'; }
+      else if (min !== null && min < 1)   { tempoTxt = 'Agora mesmo'; }
+      else if (min !== null && min < 60)  { tempoTxt = `Há ${min} min`; }
+      else if (min !== null && min < 1440){ tempoTxt = `Há ${Math.floor(min/60)}h`; }
+      else                                { tempoTxt = new Date(p.atualizado_em).toLocaleString('pt-BR'); }
 
       return `
-        <div class="tec-card ${isSel ? 'sel' : ''} ${offlineCard ? 'offline-card' : ''}"
-             onclick="${temGps || !offlineCard ? `selecionarTecnico(${p.tecnico_id})` : `mostrarOffline(${p.tecnico_id})`}">
-          <div class="status-dot ${dotCls}"></div>
+        <div class="tec-card ${isSel ? 'sel' : ''} ${offlineCd ? 'offline-card' : ''}"
+             onclick="${temGps ? `selecionarTecnico(${p.tecnico_id})` : `mostrarOffline(${p.tecnico_id})`}">
+          <div class="status-dot ${online ? 'dot-online' : 'dot-offline'}"></div>
           <div style="flex:1;min-width:0;">
-            <div style="font-weight:700;font-size:13px;color:#1c2430;
-                        white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+            <div style="font-weight:700;font-size:13px;color:#1c2430;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
               ${escHtml(p.tecnico_nome)}
             </div>
-            <div style="font-size:11px;color:#64748b;margin-top:2px;
-                        white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+            <div style="font-size:11px;color:#64748b;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
               ${p.cliente_nome
-                ? `<a href="/app-tecnicos/admin/os/detalhe.php?id=${p.os_id}"
-                      style="color:#1d4ed8;text-decoration:none;"
-                      onclick="event.stopPropagation();">OS #${p.os_id} — ${escHtml(p.cliente_nome)}</a>`
+                ? `<a href="/app-tecnicos/admin/os/detalhe.php?id=${p.os_id}" style="color:#1d4ed8;text-decoration:none;" onclick="event.stopPropagation();">OS #${p.os_id} — ${escHtml(p.cliente_nome)}</a>`
                 : '<span style="color:#94a3b8;">Disponível</span>'}
             </div>
             <div style="margin-top:5px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-              <span class="badge-status ${badgeCls}">${badgeTxt}</span>
+              <span class="badge-status ${online ? 'badge-online' : 'badge-offline'}">${online ? 'Online' : 'Offline'}</span>
               <span style="font-size:10px;color:#94a3b8;">${escHtml(tempoTxt)}</span>
             </div>
           </div>
           ${temGps ? `
           <button onclick="event.stopPropagation();abrirGMaps(${p.latitude},${p.longitude})"
-                  class="btn btn-neutro btn-sm" title="Abrir no Google Maps"
-                  style="padding:4px 8px;font-size:11px;flex-shrink:0;">
+                  class="btn btn-neutro btn-sm" style="padding:4px 8px;font-size:11px;flex-shrink:0;">
             Maps
           </button>` : ''}
         </div>`;
@@ -220,8 +238,7 @@ require_once __DIR__ . '/../../includes/header.php';
       const dados = await apiGet('/gps/listar.php');
       posicoes = dados.posicoes || [];
       renderizarSidebar();
-
-      // Seleciona automaticamente o primeiro com GPS online, se nenhum selecionado
+      // Auto-seleciona o primeiro online na carga inicial
       if (tecSelecionado === null) {
         const primeiro = posicoes.find(p => isOnline(p));
         if (primeiro) { selecionarTecnico(primeiro.tecnico_id); }

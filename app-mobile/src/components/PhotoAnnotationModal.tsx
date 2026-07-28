@@ -200,9 +200,9 @@ export function PhotoAnnotationModal({visible, imagemBase64, onConfirm, onCancel
     <Modal visible={visible} transparent={false} animationType="slide" statusBarTranslucent>
       <View style={s.container}>
         <View style={s.header}>
-          <Text style={s.titulo}>✏ Adicionar anotações</Text>
+          <Text style={s.titulo}>Adicionar anotações</Text>
           <TouchableOpacity onPress={onCancelar} hitSlop={{top:12,bottom:12,left:12,right:12}}>
-            <Text style={s.fechar}>✕ Cancelar</Text>
+            <Text style={s.fechar}>Cancelar</Text>
           </TouchableOpacity>
         </View>
         <WebView

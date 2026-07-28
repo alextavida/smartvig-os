@@ -152,11 +152,6 @@ function montarQuery(array $sobrescrever = []): string
   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
     <span style="font-size:13px; color:var(--cinza-500);"><?= $total ?> OS encontrada<?= $total !== 1 ? 's' : '' ?></span>
     <div style="display:flex;gap:8px;align-items:center;">
-      <span id="sync-status-lista" style="font-size:12px;color:#666;"></span>
-      <button onclick="sincronizarGCLista()" class="btn btn-primario btn-sm no-print" style="display:flex;align-items:center;gap:5px;">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-        Sincronizar GC
-      </button>
       <a href="<?= montarQuery(['exportar' => 'csv']) ?>" class="btn btn-neutro btn-sm no-print">
         <?= ic('exportar', 14) ?> CSV
       </a>
@@ -210,7 +205,7 @@ function montarQuery(array $sobrescrever = []): string
                 $prazo  = new DateTimeImmutable($dp);
                 $diff   = (int) $hoje->diff($prazo)->format('%r%a');
                 if ($diff < 0) {
-                  echo '<span style="background:#fee2e2;color:#b91c1c;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;">🔴 Vencido</span>';
+                  echo '<span style="background:#fee2e2;color:#b91c1c;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;">Vencido</span>';
                 } elseif ($diff <= 2) {
                   echo '<span style="background:#fef9c3;color:#92400e;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;">🟡 Vencendo</span>';
                 } else {

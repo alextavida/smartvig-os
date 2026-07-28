@@ -161,7 +161,7 @@ export function CreateOsScreen({navigation}: Props) {
 
       {erro ? (
         <View style={estilos.alertaErro}>
-          <Text style={estilos.alertaErroText}>✕ {erro}</Text>
+          <Text style={estilos.alertaErroText}>{erro}</Text>
         </View>
       ) : null}
 
@@ -174,14 +174,14 @@ export function CreateOsScreen({navigation}: Props) {
             <View style={{flex: 1}}>
               <Text style={estilos.clienteNomeSel}>{clienteSelecionado.nome}</Text>
               {clienteSelecionado.endereco ? (
-                <Text style={estilos.clienteDetalhe} numberOfLines={1}>📍 {clienteSelecionado.endereco}</Text>
+                <Text style={estilos.clienteDetalhe} numberOfLines={1}>{clienteSelecionado.endereco}</Text>
               ) : null}
               {clienteSelecionado.telefone ? (
-                <Text style={estilos.clienteDetalhe}>📞 {clienteSelecionado.telefone}</Text>
+                <Text style={estilos.clienteDetalhe}>{clienteSelecionado.telefone}</Text>
               ) : null}
             </View>
             <TouchableOpacity onPress={limparCliente} style={estilos.botaoLimpar}>
-              <Text style={{color: CORES.cinza700, fontSize: 18}}>✕</Text>
+              <Text style={{color: CORES.cinza700, fontSize: 18}}>×</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -267,7 +267,7 @@ export function CreateOsScreen({navigation}: Props) {
                     style={[estilos.respBadge, isResp && estilos.respBadgeSel]}
                     onPress={() => setTecnicoResponsavel(t.id)}>
                     <Text style={[estilos.respBadgeText, isResp && {color: '#fff'}]}>
-                      {isResp ? 'Responsável ✓' : 'Responsável'}
+                      {isResp ? 'Responsável' : 'Responsável'}
                     </Text>
                   </TouchableOpacity>
                 )}
@@ -285,7 +285,7 @@ export function CreateOsScreen({navigation}: Props) {
           style={estilos.dateInput}
           onPress={() => setMostrarDatePicker(true)}>
           <Text style={{color: CORES.cinza900, fontSize: 15}}>
-            📅  {data.toLocaleDateString('pt-BR')}
+            {data.toLocaleDateString('pt-BR')}
           </Text>
         </TouchableOpacity>
         {mostrarDatePicker && (

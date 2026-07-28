@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import {apiGet} from '../api/client';
 import {CORES} from '../config';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 
 interface Produtividade {
   total_os: number;
@@ -96,7 +97,7 @@ export function ProdutividadeScreen() {
       {/* OS ativa agora */}
       {dados.os_ativa && (
         <View style={[s.card, {borderLeftWidth: 3, borderLeftColor: CORES.amarelo}]}>
-          <Text style={[s.secaoTitulo, {color: CORES.amarelo}]}>⚡ Em andamento agora</Text>
+          <Text style={[s.secaoTitulo, {color: CORES.amarelo}]}>Em andamento agora</Text>
           <Text style={s.clienteAtivo}>{dados.os_ativa.cliente_nome}</Text>
           <Text style={{color: CORES.cinza500, fontSize: 12}}>OS #{dados.os_ativa.id}</Text>
         </View>
@@ -125,7 +126,7 @@ export function ProdutividadeScreen() {
       {/* Tempo médio */}
       {dados.tempo_medio_segundos !== null && (
         <View style={s.card}>
-          <Text style={s.secaoTitulo}>⏱ Tempo de atendimento</Text>
+          <Text style={s.secaoTitulo}>Tempo de atendimento</Text>
           <View style={{flexDirection: 'row', justifyContent: 'space-between', marginTop: 8}}>
             <View style={{alignItems: 'center', flex: 1}}>
               <Text style={s.tempoNum}>{formatarTempo(dados.tempo_medio_segundos)}</Text>
@@ -185,7 +186,7 @@ export function ProdutividadeScreen() {
               </View>
               {os.tempo_atendimento_segundos ? (
                 <Text style={{color: CORES.cinza700, fontSize: 12, fontWeight: '700'}}>
-                  ⏱ {formatarTempo(os.tempo_atendimento_segundos)}
+                  {formatarTempo(os.tempo_atendimento_segundos)}
                 </Text>
               ) : null}
             </View>

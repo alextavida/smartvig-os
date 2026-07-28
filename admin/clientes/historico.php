@@ -69,7 +69,7 @@ function rotuloStatus(string $s): string {
 }
 
 function estrelas(int $nota): string {
-    return str_repeat('⭐', $nota) . str_repeat('☆', 5 - $nota);
+    return str_repeat('★', $nota) . str_repeat('☆', 5 - $nota);
 }
 ?>
 
@@ -83,7 +83,7 @@ function estrelas(int $nota): string {
   <form method="get" style="display:flex;gap:8px;flex-wrap:wrap;">
     <input name="nome" value="<?= htmlspecialchars($busca) ?>"
            placeholder="Nome do cliente..." class="form-control" style="flex:1;min-width:200px;" required>
-    <button type="submit" class="btn btn-primario">🔍 Buscar</button>
+    <button type="submit" class="btn btn-primario">Buscar</button>
     <?php if ($busca): ?>
       <a href="historico.php" class="btn btn-secundario">Limpar</a>
     <?php endif; ?>
@@ -126,11 +126,11 @@ function estrelas(int $nota): string {
     <?php endif; ?>
     <div class="stat-card" style="min-width:120px;background:#fff;">
       <div class="valor" style="color:#1d4ed8;"><?= (int)$totalFotos ?></div>
-      <div class="rotulo">📸 Fotos</div>
+      <div class="rotulo">Fotos</div>
     </div>
     <?php if ($mediaNps !== null): ?>
     <div class="stat-card" style="min-width:120px;background:#fff;">
-      <div class="valor" style="color:#ca8a04;"><?= number_format($mediaNps, 1) ?> ⭐</div>
+      <div class="valor" style="color:#ca8a04;"><?= number_format($mediaNps, 1) ?> ★</div>
       <div class="rotulo">Média NPS</div>
     </div>
     <?php endif; ?>
@@ -145,30 +145,30 @@ function estrelas(int $nota): string {
           <?= $os['codigo'] ? htmlspecialchars($os['codigo']) : '#'.(int)$os['id'] ?>
           <span class="badge <?= $os['situacao_local'] ?>" style="font-size:11px;margin-left:6px;"><?= rotuloStatus($os['situacao_local']) ?></span>
           <?php if ($os['prioridade'] === 'urgente'): ?>
-            <span style="font-size:11px;color:#dc2626;font-weight:700;margin-left:4px;">🔴 Urgente</span>
+            <span class="badge" style="font-size:11px;color:#dc2626;background:#fee2e2;margin-left:4px;">Urgente</span>
           <?php endif; ?>
         </div>
         <div style="font-size:12px;color:#64748b;margin-top:3px;">
-          <?= $os['data_agendamento'] ? '📅 ' . date('d/m/Y', strtotime($os['data_agendamento'])) : '' ?>
-          <?= $os['data_conclusao'] ? ' · ✓ ' . date('d/m/Y', strtotime($os['data_conclusao'])) : '' ?>
-          <?= $os['tecnico_nome'] ? ' · 👤 ' . htmlspecialchars($os['tecnico_nome']) : '' ?>
-          <?= $os['tempo_atendimento_segundos'] ? ' · ⏱ ' . formatSegundos((int)$os['tempo_atendimento_segundos']) : '' ?>
+          <?= $os['data_agendamento'] ? date('d/m/Y', strtotime($os['data_agendamento'])) : '' ?>
+          <?= $os['data_conclusao'] ? ' · Concluído ' . date('d/m/Y', strtotime($os['data_conclusao'])) : '' ?>
+          <?= $os['tecnico_nome'] ? ' · ' . htmlspecialchars($os['tecnico_nome']) : '' ?>
+          <?= $os['tempo_atendimento_segundos'] ? ' · ' . formatSegundos((int)$os['tempo_atendimento_segundos']) : '' ?>
         </div>
         <?php if ($os['cliente_telefone']): ?>
           <div style="font-size:12px;color:#64748b;margin-top:2px;">
-            📞 <a href="tel:<?= htmlspecialchars($os['cliente_telefone']) ?>" style="color:#1462b0;"><?= htmlspecialchars($os['cliente_telefone']) ?></a>
+            <a href="tel:<?= htmlspecialchars($os['cliente_telefone']) ?>" style="color:#1462b0;"><?= htmlspecialchars($os['cliente_telefone']) ?></a>
           </div>
         <?php endif; ?>
       </div>
       <div style="display:flex;gap:6px;align-items:center;">
         <?php if ($os['total_fotos'] > 0): ?>
           <span style="background:#dbeafe;color:#1d4ed8;border-radius:999px;padding:2px 10px;font-size:11px;font-weight:700;">
-            📸 <?= (int)$os['total_fotos'] ?> foto<?= $os['total_fotos'] > 1 ? 's' : '' ?>
+            <?= (int)$os['total_fotos'] ?> foto<?= $os['total_fotos'] > 1 ? 's' : '' ?>
           </span>
         <?php endif; ?>
         <?php if ($os['total_assinaturas'] > 0): ?>
           <span style="background:#dcfce7;color:#16803c;border-radius:999px;padding:2px 10px;font-size:11px;font-weight:700;">
-            ✍️ Assinado
+            Assinado
           </span>
         <?php endif; ?>
         <a href="/app-tecnicos/admin/os/detalhe.php?id=<?= (int)$os['id'] ?>"

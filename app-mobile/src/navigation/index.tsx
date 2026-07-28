@@ -3,6 +3,7 @@ import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import {Text, View} from 'react-native';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import {useAuth} from '../hooks/useAuth';
 import {LoginScreen} from '../screens/LoginScreen';
 import {HomeScreen} from '../screens/HomeScreen';
@@ -31,11 +32,11 @@ export type AppTabParamList = {
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 const AppTab   = createBottomTabNavigator<AppTabParamList>();
 
-function TabIcon({emoji, label, cor, pendentes}: {emoji: string; label: string; cor: string; pendentes?: number}) {
+function TabIcon({icone, cor, pendentes}: {icone: string; cor: string; pendentes?: number}) {
   return (
     <View style={{alignItems: 'center'}}>
       <View>
-        <Text style={{fontSize: 20, color: cor}}>{emoji}</Text>
+        <Icon name={icone} size={22} color={cor} />
         {pendentes ? (
           <View style={{
             position: 'absolute', top: -4, right: -8,
@@ -76,7 +77,7 @@ function AppTabs() {
         options={{
           tabBarLabel: 'Ordens',
           tabBarIcon: ({color}) => (
-            <TabIcon emoji="📋" label="Ordens" cor={color} pendentes={pendentes.length} />
+            <TabIcon icone="assignment" cor={color} pendentes={pendentes.length} />
           ),
         }}
       />
@@ -89,7 +90,7 @@ function AppTabs() {
           headerStyle: {backgroundColor: CORES.branco},
           headerTitleStyle: {fontWeight: '800', color: CORES.cinza900, fontSize: 16},
           tabBarLabel: 'Produtividade',
-          tabBarIcon: ({color}) => <TabIcon emoji="📊" label="Produtividade" cor={color} />,
+          tabBarIcon: ({color}) => <TabIcon icone="bar-chart" cor={color} />,
         }}
       />
       <AppTab.Screen
@@ -97,7 +98,7 @@ function AppTabs() {
         component={ProfileScreen}
         options={{
           tabBarLabel: 'Perfil',
-          tabBarIcon: ({color}) => <TabIcon emoji="👤" label="Perfil" cor={color} />,
+          tabBarIcon: ({color}) => <TabIcon icone="person" cor={color} />,
         }}
       />
     </AppTab.Navigator>

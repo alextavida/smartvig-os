@@ -25,13 +25,21 @@ exigirCampos($dados, ['tecnico_id']);
 $tecnicoId = (int) $dados['tecnico_id'];
 $pdo = obterConexao();
 
-$stmtVerifica = $pdo->prepare("SELECT id FROM usuarios WHERE id = :id AND perfil = 'tecnico'");
+$stmtVerifica = $pdo->prepare('SELECT id FROM usuarios WHERE id = :id');
 $stmtVerifica->execute(['id' => $tecnicoId]);
 if (!$stmtVerifica->fetch()) {
-    responderErro('Tecnico nao encontrado.', 404);
+    responderErro('Usuario nao encontrado.', 404);
 }
 
-$camposPermitidos = ['nome', 'email', 'telefone', 'ativo'];
+// Impede que o gestor altere o proprio perfil (evitar auto-lockout)
+if (isset($dados['perfil']) && (int)($payload['usuario_id'] ?? 0) === $tecnicoId) {
+    responderErro('Nao e possivel alterar o proprio perfil.', 403);
+}
+if (isset($dados['perfil']) && !in_array($dados['perfil'], ['gestor', 'supervisor', 'tecnico'], true)) {
+    responderErro('Perfil invalido.', 422);
+}
+
+$camposPermitidos = ['nome', 'email', 'telefone', 'ativo', 'perfil'];
 $sets = [];
 $parametros = ['id' => $tecnicoId];
 

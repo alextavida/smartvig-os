@@ -61,7 +61,7 @@ $eventos = [];
 foreach ($rows as $r) {
     $cor    = $coresPorStatus[$r['situacao_local']] ?? '#64748b';
     $titulo = ($r['codigo'] ?: '#' . $r['id']) . ' — ' . ($r['cliente_nome'] ?? 'Cliente');
-    if ($r['prioridade'] === 'urgente') $titulo = '🔴 ' . $titulo;
+    if ($r['prioridade'] === 'urgente') $titulo = '[!] ' . $titulo;
 
     // Evento de agendamento
     if ($r['data_agendamento']) {
@@ -88,7 +88,7 @@ foreach ($rows as $r) {
         $eventos[] = [
             'id'         => 'pr_' . $r['id'],
             'osId'       => (int) $r['id'],
-            'title'      => '⏰ Prazo: ' . $titulo,
+            'title'      => 'Prazo: ' . $titulo,
             'start'      => $r['data_prazo'],
             'color'      => $atrasado ? '#dc2626' : '#f59e0b',
             'tipo'       => 'prazo',

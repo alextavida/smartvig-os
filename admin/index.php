@@ -62,17 +62,11 @@ function rotuloStatus(string $s): string
 
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
   <h2 style="margin:0;font-size:1.1rem;">Visao geral</h2>
-  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-    <span id="sync-status" style="font-size:12px;color:#666;">
-      <?php if ($ultimaSync): ?>
-        Última sync: <?= date('d/m H:i', strtotime($ultimaSync)) ?>
-      <?php endif; ?>
-    </span>
-    <button id="btn-sync-gc" onclick="sincronizarGC(false)" class="btn btn-primario btn-sm" style="display:flex;align-items:center;gap:6px;">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-      Sincronizar GestaoClick
-    </button>
-  </div>
+  <span id="sync-status" style="font-size:12px;color:#666;">
+    <?php if ($ultimaSync): ?>
+      Última sync: <?= date('d/m H:i', strtotime($ultimaSync)) ?>
+    <?php endif; ?>
+  </span>
 </div>
 
 <div class="grid-cards">
@@ -94,7 +88,7 @@ function rotuloStatus(string $s): string
     <div class="vazio" style="text-align:center;padding:32px;">
       <?= ic('os_vazio') ?><br>
       Nenhuma OS encontrada.<br>
-      <button onclick="sincronizarGC(false)" class="btn btn-primario" style="margin-top:12px;">Importar do GestaoClick agora</button>
+      <span style="font-size:13px;color:#94a3b8;display:block;margin-top:8px;">A sincronização ocorre automaticamente a cada 5 minutos.</span>
     </div>
   <?php else: ?>
   <div style="overflow-x:auto;">
@@ -156,13 +150,7 @@ function rotuloStatus(string $s): string
 
 <script>
 async function sincronizarGC(silencioso) {
-  const btn = document.getElementById('btn-sync-gc');
   const statusEl = document.getElementById('sync-status');
-  btn.disabled = true;
-  if (!silencioso) {
-    btn.innerHTML = '<span style="display:inline-block;animation:spin 1s linear infinite;">&#8635;</span> Sincronizando...';
-    statusEl.textContent = '';
-  }
   try {
     const r = await fetch('/app-tecnicos/api/os/sincronizar.php', {
       method: 'POST',
@@ -174,23 +162,10 @@ async function sincronizarGC(silencioso) {
       const {criadas, atualizadas} = d.dados;
       const agora = new Date().toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
       statusEl.style.color = '#16803c';
-      statusEl.textContent = `✓ ${criadas} criadas, ${atualizadas} atualizadas — ${agora}`;
+      statusEl.textContent = `Sync: ${criadas} criadas, ${atualizadas} atualizadas — ${agora}`;
       if (criadas > 0) { setTimeout(() => location.reload(), 1000); }
-    } else {
-      if (!silencioso) {
-        statusEl.style.color = '#c0392b';
-        statusEl.textContent = '✕ ' + (d.erro || d.mensagem || 'Erro desconhecido');
-      }
     }
-  } catch (e) {
-    if (!silencioso) {
-      statusEl.style.color = '#c0392b';
-      statusEl.textContent = '✕ Falha de conexao';
-    }
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Sincronizar GestaoClick';
-  }
+  } catch (e) { /* silencioso */ }
 }
 
 async function carregarSituacoesGC() {

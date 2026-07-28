@@ -170,7 +170,7 @@ tfoot td { font-weight: 700; }
   <?php if (!empty($os['tempo_atendimento_segundos'])): ?>
   <div class="linha">
     <span class="campo-label">Tempo total</span>
-    <span class="campo-val">⏱ <?= formatSegundos((int) $os['tempo_atendimento_segundos']) ?></span>
+    <span class="campo-val"><?= formatSegundos((int) $os['tempo_atendimento_segundos']) ?></span>
   </div>
   <?php endif; ?>
 </div>

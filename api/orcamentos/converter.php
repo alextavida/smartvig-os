@@ -36,7 +36,7 @@ $itens->execute([':id' => $id]);
 $listaItens = $itens->fetchAll();
 
 // Monta observacoes da OS com os itens do orcamento
-$obsLinhas = ["📋 Orçamento convertido: {$orc['codigo']}", ''];
+$obsLinhas = ["Orçamento convertido: {$orc['codigo']}", ''];
 foreach ($listaItens as $i) {
     $subtotal = (float)$i['quantidade'] * (float)$i['valor_unitario'];
     $tipo = $i['tipo'] === 'peca' ? '[Peça]' : '[Serviço]';

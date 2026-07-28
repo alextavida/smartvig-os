@@ -13,6 +13,7 @@ import {
 import {listarGps} from '../api/gps';
 import {GpsTecnico} from '../types';
 import {CORES} from '../config';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 
 const INTERVALO_MS = 30_000;
 
@@ -175,7 +176,7 @@ export function MapaTecnicosScreen() {
           renderItem={({item}) => <TecnicoCard p={item} />}
           ListEmptyComponent={
             <View style={estilos.vazio}>
-              <Text style={estilos.vazioIcon}>📍</Text>
+              <Icon name="location-off" size={48} color={CORES.cinza300} style={{marginBottom: 12}} />
               <Text style={estilos.vazioText}>Nenhum técnico em campo.</Text>
               <Text style={estilos.vazioSub}>
                 O GPS é enviado automaticamente pelo app dos técnicos.
@@ -262,7 +263,6 @@ const estilos = StyleSheet.create({
   btnRetryText: {color: CORES.azul700, fontWeight: '600'},
 
   vazio: {alignItems: 'center', paddingTop: 60},
-  vazioIcon: {fontSize: 48, marginBottom: 12},
   vazioText: {fontSize: 15, fontWeight: '700', color: CORES.cinza700, marginBottom: 6},
   vazioSub:  {fontSize: 13, color: CORES.cinza500, textAlign: 'center', maxWidth: 260},
 });

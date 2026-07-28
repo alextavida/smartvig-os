@@ -109,12 +109,12 @@ $isGestor = $usuarioAtual['perfil'] === 'gestor';
   function abrirModal(info) {
     const ev = info.event;
     const ep = ev.extendedProps;
-    document.getElementById('modal-titulo').textContent = ev.title.replace(/🔴\s?/, '');
+    document.getElementById('modal-titulo').textContent = ev.title;
     document.getElementById('modal-corpo').innerHTML = `
       <div><b>Status:</b> ${rotuloStatus(ep.status)}</div>
-      <div><b>Tipo:</b> ${ep.tipo === 'prazo' ? '⏰ Prazo/SLA' : '📅 Agendamento'}</div>
+      <div><b>Tipo:</b> ${ep.tipo === 'prazo' ? 'Prazo/SLA' : 'Agendamento'}</div>
       ${ep.tecnico ? `<div><b>Técnico:</b> ${escHtml(ep.tecnico)}</div>` : ''}
-      ${ep.prioridade === 'urgente' ? '<div style="color:#dc2626;font-weight:700;">🔴 URGENTE</div>' : ''}
+      ${ep.prioridade === 'urgente' ? '<div style="color:#dc2626;font-weight:700;">URGENTE</div>' : ''}
     `;
     document.getElementById('modal-link').href = '/app-tecnicos/admin/os/detalhe.php?id=' + ep.os_id;
     document.getElementById('modal-evento').classList.add('aberto');

@@ -1,5 +1,6 @@
 import React from 'react';
 import {View, Text, TouchableOpacity, StyleSheet} from 'react-native';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import {OS} from '../types';
 import {CORES} from '../config';
 import {StatusBadge} from './StatusBadge';
@@ -33,17 +34,22 @@ export function OsCard({os, onPress, mostrarTecnico = false}: Props) {
       </Text>
 
       {os.cliente_endereco ? (
-        <Text style={estilos.detalhe} numberOfLines={1}>
-          📍 {os.cliente_endereco}
-        </Text>
+        <View style={estilos.detalheRow}>
+          <Icon name="location-on" size={13} color={CORES.cinza500} />
+          <Text style={[estilos.detalhe, {flex: 1, marginBottom: 0}]} numberOfLines={1}>{os.cliente_endereco}</Text>
+        </View>
       ) : null}
 
-      <Text style={estilos.detalhe}>📅 {dataFormatada}</Text>
+      <View style={estilos.detalheRow}>
+        <Icon name="calendar-today" size={13} color={CORES.cinza500} />
+        <Text style={[estilos.detalhe, {marginBottom: 0}]}>{dataFormatada}</Text>
+      </View>
 
       {mostrarTecnico && (
-        <Text style={estilos.tecnico} numberOfLines={1}>
-          👤 {os.tecnico_responsavel_nome ?? 'Sem técnico atribuído'}
-        </Text>
+        <View style={[estilos.detalheRow, {marginTop: 2}]}>
+          <Icon name="person" size={13} color={CORES.azul700} />
+          <Text style={[estilos.tecnico, {marginBottom: 0}]} numberOfLines={1}>{os.tecnico_responsavel_nome ?? 'Sem técnico atribuído'}</Text>
+        </View>
       )}
 
       <View style={estilos.rodape}>
@@ -101,6 +107,9 @@ const estilos = StyleSheet.create({
     fontSize: 15,
     color: CORES.cinza900,
     marginBottom: 6,
+  },
+  detalheRow: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 5, marginBottom: 4,
   },
   detalhe: {
     fontSize: 13,

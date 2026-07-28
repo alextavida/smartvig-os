@@ -22,6 +22,7 @@ import {useNotificacoes} from '../hooks/useNotificacoes';
 import {useOfflineQueue} from '../hooks/useOfflineQueue';
 import {CORES} from '../config';
 import {RootStackParamList} from '../navigation';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
@@ -145,7 +146,7 @@ export function HomeScreen({navigation}: Props) {
       {/* Banner offline (técnico com ações pendentes) */}
       {!isGestor && pendentes.length > 0 && (
         <View style={estilos.bannerOffline}>
-          <Text style={estilos.bannerOfflineIcon}>📡</Text>
+          <Icon name="cloud-off" size={16} color={CORES.amarelo} style={{marginRight: 6}} />
           <Text style={estilos.bannerOfflineText}>
             {pendentes.length} ação{pendentes.length > 1 ? 'ões' : ''} aguardando sincronização
           </Text>
@@ -196,7 +197,7 @@ export function HomeScreen({navigation}: Props) {
           style={estilos.acessoProdutividade}
           onPress={() => nav.navigate('Produtividade')}
           activeOpacity={0.8}>
-          <Text style={estilos.acessoProdutividadeIcon}>📊</Text>
+          <Icon name="bar-chart" size={18} color={CORES.cinza700} style={{marginRight: 8}} />
           <Text style={estilos.acessoProdutividadeText}>Ver minha produtividade</Text>
           <Text style={estilos.acessoProdutividadeChevron}>›</Text>
         </TouchableOpacity>
@@ -208,7 +209,7 @@ export function HomeScreen({navigation}: Props) {
           style={[estilos.acessoProdutividade, {backgroundColor: '#eff6ff'}]}
           onPress={() => nav.navigate('MapaTecnicos')}
           activeOpacity={0.8}>
-          <Text style={estilos.acessoProdutividadeIcon}>📍</Text>
+          <Icon name="location-on" size={18} color={CORES.azul700} style={{marginRight: 8}} />
           <Text style={[estilos.acessoProdutividadeText, {color: CORES.azul700}]}>
             Mapa de técnicos em campo
           </Text>
@@ -218,7 +219,7 @@ export function HomeScreen({navigation}: Props) {
 
       {/* Busca */}
       <View style={estilos.buscaContainer}>
-        <Text style={estilos.buscaIcone}>🔍</Text>
+        <Icon name="search" size={18} color={CORES.cinza500} style={{marginRight: 6}} />
         <TextInput
           style={estilos.buscaInput}
           value={busca}
@@ -288,7 +289,7 @@ export function HomeScreen({navigation}: Props) {
           )}
           ListEmptyComponent={
             <View style={estilos.vazio}>
-              <Text style={estilos.vazioIcon}>📋</Text>
+              <Icon name="assignment" size={52} color={CORES.cinza300} style={{marginBottom: 16}} />
               <Text style={estilos.vazioText}>Nenhuma OS encontrada.</Text>
               <Text style={estilos.vazioSub}>
                 {abaAtiva
@@ -362,7 +363,6 @@ const estilos = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#ffc107',
   },
-  bannerOfflineIcon: {fontSize: 16},
   bannerOfflineText: {flex: 1, fontSize: 13, fontWeight: '600', color: '#856404'},
 
   // Card OS ativa
@@ -407,7 +407,6 @@ const estilos = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: CORES.cinza100,
   },
-  acessoProdutividadeIcon: {fontSize: 16},
   acessoProdutividadeText: {flex: 1, fontSize: 13, fontWeight: '600', color: CORES.azul700},
   acessoProdutividadeChevron: {fontSize: 20, color: CORES.azul700, fontWeight: '300'},
 
@@ -426,7 +425,6 @@ const estilos = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: CORES.cinza100,
     gap: 6,
   },
-  buscaIcone: {fontSize: 15, color: CORES.cinza500},
   buscaInput: {
     flex: 1, fontSize: 14, color: CORES.cinza900,
     paddingVertical: 6,
@@ -444,7 +442,6 @@ const estilos = StyleSheet.create({
   botaoRetry: {backgroundColor: CORES.azul100, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 999},
   botaoRetryText: {color: CORES.azul700, fontWeight: '600'},
   vazio: {alignItems: 'center', paddingTop: 60},
-  vazioIcon: {fontSize: 52, marginBottom: 16},
   vazioText: {fontSize: 16, fontWeight: '700', color: CORES.cinza700, marginBottom: 6},
   vazioSub: {fontSize: 13, color: CORES.cinza500, textAlign: 'center'},
   fab: {

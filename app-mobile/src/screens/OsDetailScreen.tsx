@@ -28,6 +28,7 @@ import {listarTecnicos} from '../api/tecnicos';
 import {atualizarGps} from '../api/gps';
 import {uploadMidia, uploadBase64Midia} from '../api/midias';
 import {OSDetalhe, TecnicoLista, ProdutoGC, GCEquipamento} from '../types';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import {StatusBadge} from '../components/StatusBadge';
 import {PriorityBadge} from '../components/PriorityBadge';
 import {SignatureModal} from '../components/SignatureModal';
@@ -289,7 +290,7 @@ export function OsDetailScreen({route, navigation}: Props) {
   function escolherMidia() {
     Alert.alert('Enviar mídia', 'Como deseja adicionar?', [
       {text: 'Câmera', onPress: () => enviarMidia('camera')},
-      {text: '📸 Câmera + Anotação', onPress: () => enviarMidia('camera', true)},
+      {text: 'Câmera + Anotação', onPress: () => enviarMidia('camera', true)},
       {text: 'Galeria', onPress: () => enviarMidia('galeria')},
       {text: 'Cancelar', style: 'cancel'},
     ]);
@@ -363,18 +364,19 @@ export function OsDetailScreen({route, navigation}: Props) {
 
         {!isOnline && (
           <View style={estilos.offlineBanner}>
-            <Text style={estilos.offlineText}>📵 Sem conexão — funcionalidades podem falhar</Text>
+            <Icon name="cloud-off" size={15} color="#fff" style={{marginRight: 8}} />
+            <Text style={estilos.offlineText}>Sem conexão — funcionalidades podem falhar</Text>
           </View>
         )}
 
         {sucesso ? (
           <View style={estilos.alertaSucesso}>
-            <Text style={estilos.alertaSucessoText}>✓ {sucesso}</Text>
+            <Text style={estilos.alertaSucessoText}>{sucesso}</Text>
           </View>
         ) : null}
         {erro ? (
           <View style={estilos.alertaErro}>
-            <Text style={estilos.alertaErroText}>✕ {erro}</Text>
+            <Text style={estilos.alertaErroText}>{erro}</Text>
           </View>
         ) : null}
 
@@ -392,7 +394,7 @@ export function OsDetailScreen({route, navigation}: Props) {
 
           {os.cliente_endereco ? (
             <TouchableOpacity style={estilos.infoRow} onPress={abrirRota}>
-              <Text style={estilos.infoIcon}>📍</Text>
+              <Icon name="location-on" size={14} color={CORES.cinza500} style={{marginTop: 1}} />
               <Text style={[estilos.infoText, {color: CORES.azul700}]}>{os.cliente_endereco}</Text>
             </TouchableOpacity>
           ) : null}
@@ -401,20 +403,20 @@ export function OsDetailScreen({route, navigation}: Props) {
             <TouchableOpacity
               style={estilos.infoRow}
               onPress={() => Linking.openURL(`tel:${os.cliente_telefone}`)}>
-              <Text style={estilos.infoIcon}>📞</Text>
+              <Icon name="phone" size={14} color={CORES.cinza500} style={{marginTop: 1}} />
               <Text style={[estilos.infoText, {color: CORES.azul700}]}>{os.cliente_telefone}</Text>
             </TouchableOpacity>
           ) : null}
 
           <View style={estilos.infoRow}>
-            <Text style={estilos.infoIcon}>📅</Text>
+            <Icon name="calendar-today" size={14} color={CORES.cinza500} style={{marginTop: 1}} />
             <Text style={estilos.infoText}>{dataFormatada}</Text>
           </View>
 
           <View style={{flexDirection: 'row', gap: 8, marginTop: 10}}>
             {os.cliente_endereco ? (
               <TouchableOpacity style={[estilos.botaoRota, {flex: 1}]} onPress={abrirRota}>
-                <Text style={estilos.botaoRotaText}>🗺 Rota</Text>
+                <Text style={estilos.botaoRotaText}>Rota</Text>
               </TouchableOpacity>
             ) : null}
             {os.cliente_telefone ? (
@@ -424,14 +426,14 @@ export function OsDetailScreen({route, navigation}: Props) {
                   const num = os.cliente_telefone!.replace(/\D/g, '');
                   Linking.openURL(`https://wa.me/55${num}`);
                 }}>
-                <Text style={[estilos.botaoRotaText, {color: '#1e8e5a'}]}>💬 WhatsApp</Text>
+                <Text style={[estilos.botaoRotaText, {color: '#1e8e5a'}]}>WhatsApp</Text>
               </TouchableOpacity>
             ) : null}
             {os.cliente_telefone ? (
               <TouchableOpacity
                 style={[estilos.botaoRota, {flex: 1}]}
                 onPress={() => Linking.openURL(`tel:${os.cliente_telefone}`)}>
-                <Text style={estilos.botaoRotaText}>📞 Ligar</Text>
+                <Text style={estilos.botaoRotaText}>Ligar</Text>
               </TouchableOpacity>
             ) : null}
           </View>
@@ -458,7 +460,7 @@ export function OsDetailScreen({route, navigation}: Props) {
                     await AsyncStorage.setItem(timerKey, String(inicio));
                   }, 'OS iniciada!');
                 }}>
-                <Text style={estilos.botaoAcaoText}>▶ Iniciar</Text>
+                <Text style={estilos.botaoAcaoText}>Iniciar</Text>
               </TouchableOpacity>
             )}
 
@@ -467,19 +469,19 @@ export function OsDetailScreen({route, navigation}: Props) {
                 <TouchableOpacity
                   style={[estilos.botaoAcao, estilos.botaoNeutro]}
                   onPress={() => setModalPausar(true)}>
-                  <Text style={[estilos.botaoAcaoText, {color: CORES.cinza700}]}>⏸ Pausar</Text>
+                  <Text style={[estilos.botaoAcaoText, {color: CORES.cinza700}]}>Pausar</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   style={[estilos.botaoAcao, estilos.botaoNeutro]}
                   onPress={() => setModalReagendar(true)}>
-                  <Text style={[estilos.botaoAcaoText, {color: CORES.cinza700}]}>📅 Reagendar</Text>
+                  <Text style={[estilos.botaoAcaoText, {color: CORES.cinza700}]}>Reagendar</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   style={[estilos.botaoAcao, estilos.botaoSucesso]}
                   onPress={() => setModalEncerrar(true)}>
-                  <Text style={[estilos.botaoAcaoText, {color: CORES.verde}]}>✓ Encerrar</Text>
+                  <Text style={[estilos.botaoAcaoText, {color: CORES.verde}]}>Encerrar</Text>
                 </TouchableOpacity>
               </>
             )}
@@ -488,7 +490,7 @@ export function OsDetailScreen({route, navigation}: Props) {
               <TouchableOpacity
                 style={[estilos.botaoAcao, estilos.botaoNeutro]}
                 onPress={() => setModalReagendar(true)}>
-                <Text style={[estilos.botaoAcaoText, {color: CORES.cinza700}]}>📅 Reagendar</Text>
+                <Text style={[estilos.botaoAcaoText, {color: CORES.cinza700}]}>Reagendar</Text>
               </TouchableOpacity>
             )}
 
@@ -497,7 +499,7 @@ export function OsDetailScreen({route, navigation}: Props) {
               <TouchableOpacity
                 style={[estilos.botaoAcao, estilos.botaoNeutro]}
                 onPress={() => setModalAssinatura(true)}>
-                <Text style={[estilos.botaoAcaoText, {color: CORES.cinza700}]}>✍ Assinar</Text>
+                <Text style={[estilos.botaoAcaoText, {color: CORES.cinza700}]}>Assinar</Text>
               </TouchableOpacity>
             )}
 
@@ -507,18 +509,18 @@ export function OsDetailScreen({route, navigation}: Props) {
                 <TouchableOpacity
                   style={[estilos.botaoAcao, estilos.botaoGestor]}
                   onPress={abrirModalTecnicos}>
-                  <Text style={[estilos.botaoAcaoText, {color: CORES.azul800}]}>👥 Técnicos</Text>
+                  <Text style={[estilos.botaoAcaoText, {color: CORES.azul800}]}>Técnicos</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[estilos.botaoAcao, estilos.botaoNeutro]}
                   onPress={() => setModalReagendar(true)}>
-                  <Text style={[estilos.botaoAcaoText, {color: CORES.cinza700}]}>📅 Reagendar</Text>
+                  <Text style={[estilos.botaoAcaoText, {color: CORES.cinza700}]}>Reagendar</Text>
                 </TouchableOpacity>
                 {situacao !== 'concluido' && situacao !== 'cancelado' && (
                   <TouchableOpacity
                     style={[estilos.botaoAcao, estilos.botaoSucesso]}
                     onPress={() => setModalEncerrar(true)}>
-                    <Text style={[estilos.botaoAcaoText, {color: CORES.verde}]}>✓ Encerrar</Text>
+                    <Text style={[estilos.botaoAcaoText, {color: CORES.verde}]}>Encerrar</Text>
                   </TouchableOpacity>
                 )}
               </>
@@ -527,7 +529,7 @@ export function OsDetailScreen({route, navigation}: Props) {
 
           {situacao === 'em_andamento' && !isGestor && timerInicio !== null && (
             <View style={estilos.timerBox}>
-              <Text style={estilos.timerText}>⏱ {formatarTempo(timerSegundos)}</Text>
+              <Text style={estilos.timerText}>{formatarTempo(timerSegundos)}</Text>
               <Text style={estilos.timerLabel}>tempo em atendimento</Text>
             </View>
           )}
@@ -543,7 +545,7 @@ export function OsDetailScreen({route, navigation}: Props) {
         {/* Equipamentos do GestãoClick */}
         {(os.gc_equipamentos ?? []).length > 0 && (
           <View style={[estilos.card, {borderLeftWidth: 3, borderLeftColor: CORES.azul600}]}>
-            <Text style={[estilos.secaoTitulo, {color: CORES.azul700}]}>🔧 Equipamento (GestãoClick)</Text>
+            <Text style={[estilos.secaoTitulo, {color: CORES.azul700}]}>Equipamento (GestãoClick)</Text>
             {(os.gc_equipamentos ?? []).map((eq: GCEquipamento, i: number) => (
               <View key={i} style={i > 0 ? {marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: CORES.cinza100} : undefined}>
                 {[
@@ -583,7 +585,7 @@ export function OsDetailScreen({route, navigation}: Props) {
         {/* Serviços do GestãoClick */}
         {(os.gc_servicos ?? []).length > 0 && (
           <View style={estilos.card}>
-            <Text style={estilos.secaoTitulo}>🛠 Serviços (GestãoClick)</Text>
+            <Text style={estilos.secaoTitulo}>Serviços (GestãoClick)</Text>
             {(os.gc_servicos ?? []).map((s, i) => (
               <View key={i} style={estilos.produtoRow}>
                 <View style={{flex: 1}}>
@@ -603,7 +605,7 @@ export function OsDetailScreen({route, navigation}: Props) {
         {/* Produtos/Peças do GestãoClick */}
         {(os.gc_produtos ?? []).length > 0 && (
           <View style={estilos.card}>
-            <Text style={estilos.secaoTitulo}>📦 Produtos/Peças (GestãoClick)</Text>
+            <Text style={estilos.secaoTitulo}>Produtos/Peças (GestãoClick)</Text>
             {(os.gc_produtos ?? []).map((p, i) => (
               <View key={i} style={estilos.produtoRow}>
                 <View style={{flex: 1}}>
@@ -633,7 +635,7 @@ export function OsDetailScreen({route, navigation}: Props) {
             placeholderTextColor={CORES.cinza300}
           />
           {erroVoz ? (
-            <Text style={{color: CORES.vermelho, fontSize: 12, marginTop: 4}}>⚠ {erroVoz}</Text>
+            <Text style={{color: CORES.vermelho, fontSize: 12, marginTop: 4}}>{erroVoz}</Text>
           ) : null}
           <View style={{flexDirection: 'row', gap: 8, marginTop: 10}}>
             <TouchableOpacity
@@ -646,7 +648,7 @@ export function OsDetailScreen({route, navigation}: Props) {
               style={[estilos.botaoPequeno, {backgroundColor: ouvindo ? '#fee2e2' : CORES.cinza100}]}
               onPress={() => ouvindo ? pararDitado() : iniciarDitado()}>
               <Text style={{color: ouvindo ? CORES.vermelho : CORES.cinza700, fontWeight: '600'}}>
-                {ouvindo ? '🛑 Parar' : '🎙 Ditar'}
+                {ouvindo ? 'Parar' : 'Ditar'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -813,7 +815,7 @@ export function OsDetailScreen({route, navigation}: Props) {
                   });
                 }}>
                 <Text style={{color: '#fff', fontWeight: '600'}}>
-                  {salvando ? '...' : '⏸ Confirmar'}
+                  {salvando ? '...' : 'Confirmar'}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -866,7 +868,7 @@ export function OsDetailScreen({route, navigation}: Props) {
                   });
                 }}>
                 <Text style={{color: '#fff', fontWeight: '600'}}>
-                  {salvando ? '...' : '📅 Confirmar'}
+                  {salvando ? '...' : 'Confirmar'}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -915,7 +917,7 @@ export function OsDetailScreen({route, navigation}: Props) {
                   });
                 }}>
                 <Text style={{color: '#fff', fontWeight: '600'}}>
-                  {salvando ? '...' : '✓ Encerrar'}
+                  {salvando ? '...' : 'Encerrar'}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -1059,7 +1061,7 @@ export function OsDetailScreen({route, navigation}: Props) {
                           style={[estilos.respBadge, isResp && estilos.respBadgeSel]}
                           onPress={() => setTecnicoResp(t.id)}>
                           <Text style={[estilos.respBadgeText, isResp && {color: '#fff'}]}>
-                            {isResp ? 'Resp. ✓' : 'Resp.'}
+                            {isResp ? 'Resp.' : 'Resp.'}
                           </Text>
                         </TouchableOpacity>
                       )}
@@ -1274,9 +1276,9 @@ const estilos = StyleSheet.create({
   respBadgeText: {fontSize: 11, fontWeight: '600', color: CORES.cinza500},
   offlineBanner: {
     backgroundColor: '#c62f2f', borderRadius: 8, padding: 10, marginBottom: 8,
-    flexDirection: 'row', alignItems: 'center',
+    flexDirection: 'row', alignItems: 'center', gap: 0,
   },
-  offlineText: {color: '#fff', fontWeight: '700', fontSize: 13},
+  offlineText: {color: '#fff', fontWeight: '700', fontSize: 13, flex: 1},
   timerBox: {
     backgroundColor: '#fffbeb', borderRadius: 10, padding: 10, marginTop: 10,
     alignItems: 'center',

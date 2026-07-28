@@ -101,7 +101,7 @@ function inicialTecnico(string $nome): string
     <?php if (!empty($os['portal_token'])): ?>
     <a href="https://wa.me/?text=<?= urlencode('Olá! Acompanhe o status da sua OS em tempo real: ' . (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'] . '/app-tecnicos/portal/os.php?token=' . $os['portal_token']) ?>"
        target="_blank" class="btn btn-neutro btn-sm" style="background:#e6f4ea;color:#1e8e5a;">
-      💬 Enviar portal ao cliente
+      Enviar portal ao cliente
     </a>
     <?php endif; ?>
     <a href="/app-tecnicos/admin/os/imprimir.php?id=<?= (int) $os['id'] ?>" target="_blank" class="btn btn-neutro btn-sm">
@@ -120,7 +120,7 @@ function inicialTecnico(string $nome): string
     <h3 style="margin:0;">OS #<?= (int) $os['id'] ?> &middot; <?= htmlspecialchars($os['cliente_nome'] ?? '-') ?></h3>
     <a href="/app-tecnicos/admin/clientes/historico.php?nome=<?= urlencode($os['cliente_nome'] ?? '') ?>"
        class="btn btn-secundario btn-sm" style="font-size:11px;" title="Ver todas OS deste cliente">
-      📋 Histórico do cliente
+      Histórico do cliente
     </a>
   </div>
 
@@ -352,7 +352,7 @@ if (GC_OS_ID) {
       const eqs = ex.equipamentos || [];
       eqs.forEach((eq, i) => {
         equipHtml += `<div style="border-top:1px solid #bae6fd;padding-top:10px;margin-top:10px;">
-          <div style="font-weight:700;font-size:12px;margin-bottom:8px;">🔧 EQUIPAMENTO${eqs.length > 1 ? ' #' + (i+1) : ''}</div>
+          <div style="font-weight:700;font-size:12px;margin-bottom:8px;">EQUIPAMENTO${eqs.length > 1 ? ' #' + (i+1) : ''}</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 24px;">
             ${eq.tipo   ? `<div style="margin-bottom:4px;">${cel('Tipo', eq.tipo)}</div>` : ''}
             ${eq.marca  ? `<div style="margin-bottom:4px;">${cel('Marca', eq.marca)}</div>` : ''}
@@ -494,8 +494,8 @@ async function abrirSugestaoTecnico() {
         <div style="flex:1;">
           <div style="font-weight:700;color:#1c2430;">${escHtml(t.nome)}</div>
           <div style="font-size:11px;color:#64748b;margin-top:2px;">
-            ${t.livre ? '<span style="color:#16803c;font-weight:600;">✓ Livre</span>' : `<span style="color:#dc2626;">⚡ ${t.os_ativas} OS ativa(s)</span>`}
-            ${t.gps_ativo ? ' &bull; 📍 GPS ativo' : (t.gps_min_atras ? ` &bull; GPS ${t.gps_min_atras}min atrás` : ' &bull; Sem GPS')}
+            ${t.livre ? '<span style="color:#16803c;font-weight:600;">Livre</span>' : `<span style="color:#dc2626;">${t.os_ativas} OS ativa(s)</span>`}
+            ${t.gps_ativo ? ' &bull; GPS ativo' : (t.gps_min_atras ? ` &bull; GPS ${t.gps_min_atras}min atrás` : ' &bull; Sem GPS')}
             ${t.distancia_km !== null ? ` &bull; ~${t.distancia_km}km` : ''}
           </div>
         </div>

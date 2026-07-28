@@ -15,6 +15,7 @@ import {alterarSenha} from '../api/auth';
 import {uploadFotoPerfil, urlMidia} from '../api/midias';
 import {useAuth} from '../hooks/useAuth';
 import {CORES} from '../config';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 
 const PERFIL_LABEL: Record<string, string> = {
   gestor: 'Gestor',
@@ -117,12 +118,12 @@ export function ProfileScreen() {
 
       {sucesso ? (
         <View style={estilos.alertaSucesso}>
-          <Text style={estilos.alertaSucessoText}>✓ {sucesso}</Text>
+          <Text style={estilos.alertaSucessoText}>{sucesso}</Text>
         </View>
       ) : null}
       {erro ? (
         <View style={estilos.alertaErro}>
-          <Text style={estilos.alertaErroText}>✕ {erro}</Text>
+          <Text style={estilos.alertaErroText}>{erro}</Text>
         </View>
       ) : null}
 
@@ -137,7 +138,7 @@ export function ProfileScreen() {
             </View>
           )}
           <View style={estilos.avatarCamBadge}>
-            <Text style={{fontSize: 14}}>📷</Text>
+            <Icon name="photo-camera" size={14} color={CORES.cinza700} />
           </View>
         </TouchableOpacity>
         <Text style={estilos.nomeUsuario}>{usuario?.nome ?? '-'}</Text>

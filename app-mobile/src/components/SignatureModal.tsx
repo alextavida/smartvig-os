@@ -146,9 +146,9 @@ export function SignatureModal({visible, onConfirm, onCancelar}: Props) {
       <View style={styles.overlay}>
         <View style={styles.container}>
           <View style={styles.header}>
-            <Text style={styles.titulo}>✍ Assinatura do Cliente</Text>
+            <Text style={styles.titulo}>Assinatura do Cliente</Text>
             <TouchableOpacity onPress={onCancelar} hitSlop={{top: 12, bottom: 12, left: 12, right: 12}}>
-              <Text style={styles.fechar}>✕</Text>
+              <Text style={styles.fechar}>×</Text>
             </TouchableOpacity>
           </View>
 
