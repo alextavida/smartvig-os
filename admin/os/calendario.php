@@ -52,12 +52,18 @@ $isGestor = $usuarioAtual['perfil'] === 'gestor';
     </select>
 
     <div class="legenda" style="margin-left:auto;">
-      <span class="legenda-item"><span class="legenda-dot" style="background:#64748b;"></span> Aberto</span>
-      <span class="legenda-item"><span class="legenda-dot" style="background:#1d4ed8;"></span> Em andamento</span>
-      <span class="legenda-item"><span class="legenda-dot" style="background:#d97706;"></span> Pausado</span>
-      <span class="legenda-item"><span class="legenda-dot" style="background:#16803c;"></span> Concluído</span>
-      <span class="legenda-item"><span class="legenda-dot" style="background:#f59e0b;"></span> Prazo</span>
-      <span class="legenda-item"><span class="legenda-dot" style="background:#dc2626;"></span> Atrasado</span>
+      <span class="legenda-item"><span class="legenda-dot" style="background:#64748b;border-radius:3px;"></span> Aberto</span>
+      <span class="legenda-item"><span class="legenda-dot" style="background:#1d4ed8;border-radius:3px;"></span> Em andamento</span>
+      <span class="legenda-item"><span class="legenda-dot" style="background:#d97706;border-radius:3px;"></span> Pausado</span>
+      <span class="legenda-item"><span class="legenda-dot" style="background:#16803c;border-radius:3px;"></span> Concluído</span>
+      <span class="legenda-item">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Prazo
+      </span>
+      <span class="legenda-item">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Atrasado
+      </span>
     </div>
   </div>
 </div>
@@ -84,8 +90,12 @@ $isGestor = $usuarioAtual['perfil'] === 'gestor';
 <div id="toast-reagendado" style="
   display:none; position:fixed; bottom:24px; right:24px; z-index:9999;
   background:#16803c; color:#fff; border-radius:8px; padding:12px 18px;
-  font-size:13px; font-weight:600; box-shadow:0 4px 16px rgba(0,0,0,.2);">
-  ✓ OS reagendada com sucesso!
+  font-size:13px; font-weight:600; box-shadow:0 4px 16px rgba(0,0,0,.2);
+  align-items:center; gap:8px;">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+    <polyline points="20 6 9 17 4 12"/>
+  </svg>
+  OS reagendada com sucesso!
 </div>
 
 <script>
@@ -110,11 +120,22 @@ $isGestor = $usuarioAtual['perfil'] === 'gestor';
     const ev = info.event;
     const ep = ev.extendedProps;
     document.getElementById('modal-titulo').textContent = ev.title;
+    const icoCal   = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`;
+    const icoPess  = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
+    const icoClock = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`;
     document.getElementById('modal-corpo').innerHTML = `
-      <div><b>Status:</b> ${rotuloStatus(ep.status)}</div>
-      <div><b>Tipo:</b> ${ep.tipo === 'prazo' ? 'Prazo/SLA' : 'Agendamento'}</div>
-      ${ep.tecnico ? `<div><b>Técnico:</b> ${escHtml(ep.tecnico)}</div>` : ''}
-      ${ep.prioridade === 'urgente' ? '<div style="color:#dc2626;font-weight:700;">URGENTE</div>' : ''}
+      <div style="display:flex;flex-direction:column;gap:6px;font-size:13px;color:#475569;">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span class="badge ${ep.status}" style="font-size:11px;">${rotuloStatus(ep.status)}</span>
+          ${ep.tipo === 'prazo'
+            ? `<span style="display:inline-flex;align-items:center;gap:4px;background:#fef3c7;color:#92400e;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;">${icoClock} Prazo/SLA</span>`
+            : `<span style="display:inline-flex;align-items:center;gap:4px;background:#f1f5f9;color:#475569;border-radius:6px;padding:2px 8px;font-size:11px;">${icoCal} Agendamento</span>`}
+        </div>
+        ${ep.tecnico ? `<div style="display:flex;align-items:center;gap:5px;">${icoPess} ${escHtml(ep.tecnico)}</div>` : ''}
+        ${ep.prioridade === 'urgente' ? `<span style="display:inline-flex;align-items:center;gap:5px;background:#fef2f2;color:#dc2626;border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;align-self:start;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          Urgente</span>` : ''}
+      </div>
     `;
     document.getElementById('modal-link').href = '/app-tecnicos/admin/os/detalhe.php?id=' + ep.os_id;
     document.getElementById('modal-evento').classList.add('aberto');
@@ -141,7 +162,7 @@ $isGestor = $usuarioAtual['perfil'] === 'gestor';
 
   function mostrarToast() {
     const t = document.getElementById('toast-reagendado');
-    t.style.display = 'block';
+    t.style.display = 'flex';
     setTimeout(() => { t.style.display = 'none'; }, 3000);
   }
 

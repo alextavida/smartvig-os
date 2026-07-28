@@ -126,11 +126,17 @@ function tabelaOs(array $lista): string {
   gap:12px; margin-bottom:20px;
 }
 .sla-card {
-  background:#fff; border-radius:12px; padding:16px 20px;
-  box-shadow:var(--sombra); border-left:4px solid transparent; text-align:center;
+  background:#fff; border-radius:12px; padding:18px 20px;
+  box-shadow:var(--sombra); border-left:4px solid transparent;
+  display:flex; align-items:center; gap:14px;
 }
-.sla-card .num { font-size:36px; font-weight:800; }
-.sla-card .rot { font-size:12px; color:#64748b; margin-top:2px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:5px; }
+.sla-card .sla-card-icon {
+  width:40px; height:40px; border-radius:10px; display:flex;
+  align-items:center; justify-content:center; flex-shrink:0;
+}
+.sla-card .sla-card-body { flex:1; min-width:0; }
+.sla-card .num { font-size:28px; font-weight:800; line-height:1; }
+.sla-card .rot { font-size:11px; color:#64748b; margin-top:3px; font-weight:600; }
 .sla-atrasada-card { border-color:#dc2626; }
 .sla-critica-card  { border-color:#ea580c; }
 .sla-atencao-card  { border-color:#ca8a04; }
@@ -155,24 +161,59 @@ function tabelaOs(array $lista): string {
 <!-- Resumo numérico -->
 <div class="sla-resumo">
   <div class="sla-card sla-atrasada-card">
-    <div class="num" style="color:#dc2626;"><?= count($atrasadas) ?></div>
-    <div class="rot"><span class="sla-dot dot-vermelho"></span> Atrasadas</div>
+    <div class="sla-card-icon" style="background:#fef2f2;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+    </div>
+    <div class="sla-card-body">
+      <div class="num" style="color:#dc2626;"><?= count($atrasadas) ?></div>
+      <div class="rot">Atrasadas</div>
+    </div>
   </div>
   <div class="sla-card sla-critica-card">
-    <div class="num" style="color:#ea580c;"><?= count($criticas) ?></div>
-    <div class="rot"><span class="sla-dot dot-laranja"></span> Críticas (até 1 dia)</div>
+    <div class="sla-card-icon" style="background:#fff7ed;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+    </div>
+    <div class="sla-card-body">
+      <div class="num" style="color:#ea580c;"><?= count($criticas) ?></div>
+      <div class="rot">Críticas (até 1 dia)</div>
+    </div>
   </div>
   <div class="sla-card sla-atencao-card">
-    <div class="num" style="color:#ca8a04;"><?= count($atencao) ?></div>
-    <div class="rot"><span class="sla-dot dot-amarelo"></span> Atenção (2–3 dias)</div>
+    <div class="sla-card-icon" style="background:#fefce8;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ca8a04" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+      </svg>
+    </div>
+    <div class="sla-card-body">
+      <div class="num" style="color:#ca8a04;"><?= count($atencao) ?></div>
+      <div class="rot">Atenção (2–3 dias)</div>
+    </div>
   </div>
   <div class="sla-card sla-ok-card">
-    <div class="num" style="color:#16803c;"><?= count($noPrazo) ?></div>
-    <div class="rot"><span class="sla-dot dot-verde"></span> No prazo (acima de 3 dias)</div>
+    <div class="sla-card-icon" style="background:#f0fdf4;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16803c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12"/>
+      </svg>
+    </div>
+    <div class="sla-card-body">
+      <div class="num" style="color:#16803c;"><?= count($noPrazo) ?></div>
+      <div class="rot">No prazo (&gt;3 dias)</div>
+    </div>
   </div>
   <div class="sla-card sla-sem-card">
-    <div class="num" style="color:#94a3b8;"><?= (int)$semPrazo ?></div>
-    <div class="rot"><span class="sla-dot dot-cinza"></span> Sem prazo definido</div>
+    <div class="sla-card-icon" style="background:#f8fafc;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/>
+      </svg>
+    </div>
+    <div class="sla-card-body">
+      <div class="num" style="color:#94a3b8;"><?= (int)$semPrazo ?></div>
+      <div class="rot">Sem prazo</div>
+    </div>
   </div>
 </div>
 

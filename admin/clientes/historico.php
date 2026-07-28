@@ -69,7 +69,29 @@ function rotuloStatus(string $s): string {
 }
 
 function estrelas(int $nota): string {
-    return str_repeat('★', $nota) . str_repeat('☆', 5 - $nota);
+    $h = '<span style="display:inline-flex;gap:2px;vertical-align:middle;">';
+    for ($i = 1; $i <= 5; $i++) {
+        $fill   = $i <= $nota ? '#f59e0b' : '#e2e8f0';
+        $stroke = $i <= $nota ? '#d97706' : '#cbd5e1';
+        $h .= '<svg width="14" height="14" viewBox="0 0 24 24" fill="'.$fill.'" stroke="'.$stroke.'" stroke-width="1.5">'
+            . '<polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/>'
+            . '</svg>';
+    }
+    return $h . '</span>';
+}
+
+function svgMeta(string $nome, string $cor = '#94a3b8'): string {
+    $paths = [
+        'calendar' => 'M8 2v3M16 2v3M3.5 9.09h17M21 8.5V17c0 3-1.5 4-4 4H7c-2.5 0-4-1-4-4V8.5c0-3 1.5-4 4-4h10c2.5 0 4 1 4 4z',
+        'check'    => 'M20 6L9 17l-5-5',
+        'person'   => 'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z',
+        'clock'    => 'M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zM12 6v6l4 2',
+        'camera'   => 'M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z',
+        'pen'      => 'M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z',
+    ];
+    return '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="'.$cor.'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">'
+         . '<path d="' . ($paths[$nome] ?? '') . '"/>'
+         . '</svg>';
 }
 ?>
 
@@ -148,27 +170,44 @@ function estrelas(int $nota): string {
             <span class="badge" style="font-size:11px;color:#dc2626;background:#fee2e2;margin-left:4px;">Urgente</span>
           <?php endif; ?>
         </div>
-        <div style="font-size:12px;color:#64748b;margin-top:3px;">
-          <?= $os['data_agendamento'] ? date('d/m/Y', strtotime($os['data_agendamento'])) : '' ?>
-          <?= $os['data_conclusao'] ? ' · Concluído ' . date('d/m/Y', strtotime($os['data_conclusao'])) : '' ?>
-          <?= $os['tecnico_nome'] ? ' · ' . htmlspecialchars($os['tecnico_nome']) : '' ?>
-          <?= $os['tempo_atendimento_segundos'] ? ' · ' . formatSegundos((int)$os['tempo_atendimento_segundos']) : '' ?>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">
+          <?php if ($os['data_agendamento']): ?>
+            <span style="display:inline-flex;align-items:center;gap:4px;background:#f1f5f9;border-radius:6px;padding:2px 8px;font-size:11px;color:#475569;font-weight:500;">
+              <?= svgMeta('calendar') ?> <?= date('d/m/Y', strtotime($os['data_agendamento'])) ?>
+            </span>
+          <?php endif; ?>
+          <?php if ($os['data_conclusao']): ?>
+            <span style="display:inline-flex;align-items:center;gap:4px;background:#f0fdf4;border-radius:6px;padding:2px 8px;font-size:11px;color:#16803c;font-weight:500;">
+              <?= svgMeta('check', '#16803c') ?> <?= date('d/m/Y', strtotime($os['data_conclusao'])) ?>
+            </span>
+          <?php endif; ?>
+          <?php if ($os['tecnico_nome']): ?>
+            <span style="display:inline-flex;align-items:center;gap:4px;background:#f1f5f9;border-radius:6px;padding:2px 8px;font-size:11px;color:#475569;font-weight:500;">
+              <?= svgMeta('person') ?> <?= htmlspecialchars($os['tecnico_nome']) ?>
+            </span>
+          <?php endif; ?>
+          <?php if ($os['tempo_atendimento_segundos']): ?>
+            <span style="display:inline-flex;align-items:center;gap:4px;background:#f1f5f9;border-radius:6px;padding:2px 8px;font-size:11px;color:#475569;font-weight:500;">
+              <?= svgMeta('clock') ?> <?= formatSegundos((int)$os['tempo_atendimento_segundos']) ?>
+            </span>
+          <?php endif; ?>
+          <?php if ($os['cliente_telefone']): ?>
+            <a href="tel:<?= htmlspecialchars($os['cliente_telefone']) ?>"
+               style="display:inline-flex;align-items:center;gap:4px;background:#eff6ff;border-radius:6px;padding:2px 8px;font-size:11px;color:#1462b0;font-weight:500;text-decoration:none;">
+              <?= svgMeta('person', '#1462b0') ?> <?= htmlspecialchars($os['cliente_telefone']) ?>
+            </a>
+          <?php endif; ?>
         </div>
-        <?php if ($os['cliente_telefone']): ?>
-          <div style="font-size:12px;color:#64748b;margin-top:2px;">
-            <a href="tel:<?= htmlspecialchars($os['cliente_telefone']) ?>" style="color:#1462b0;"><?= htmlspecialchars($os['cliente_telefone']) ?></a>
-          </div>
-        <?php endif; ?>
       </div>
       <div style="display:flex;gap:6px;align-items:center;">
         <?php if ($os['total_fotos'] > 0): ?>
-          <span style="background:#dbeafe;color:#1d4ed8;border-radius:999px;padding:2px 10px;font-size:11px;font-weight:700;">
-            <?= (int)$os['total_fotos'] ?> foto<?= $os['total_fotos'] > 1 ? 's' : '' ?>
+          <span style="display:inline-flex;align-items:center;gap:4px;background:#dbeafe;color:#1d4ed8;border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;">
+            <?= svgMeta('camera', '#1d4ed8') ?> <?= (int)$os['total_fotos'] ?> foto<?= $os['total_fotos'] > 1 ? 's' : '' ?>
           </span>
         <?php endif; ?>
         <?php if ($os['total_assinaturas'] > 0): ?>
-          <span style="background:#dcfce7;color:#16803c;border-radius:999px;padding:2px 10px;font-size:11px;font-weight:700;">
-            Assinado
+          <span style="display:inline-flex;align-items:center;gap:4px;background:#dcfce7;color:#16803c;border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;">
+            <?= svgMeta('pen', '#16803c') ?> Assinado
           </span>
         <?php endif; ?>
         <a href="/app-tecnicos/admin/os/detalhe.php?id=<?= (int)$os['id'] ?>"
@@ -183,9 +222,16 @@ function estrelas(int $nota): string {
     <?php endif; ?>
 
     <?php if ($os['nps_respondido']): ?>
-      <div style="background:#fefce8;border-radius:8px;padding:8px 12px;font-size:12px;color:#854d0e;border:1px solid #fef08a;">
-        <b>Avaliação NPS:</b> <?= estrelas((int)$os['nps_nota']) ?>
-        <?= $os['nps_comentario'] ? ' — "' . htmlspecialchars($os['nps_comentario']) . '"' : '' ?>
+      <div style="display:flex;align-items:flex-start;gap:10px;background:#fefce8;border-radius:8px;padding:10px 14px;border:1px solid #fef08a;margin-top:6px;">
+        <div>
+          <?= estrelas((int)$os['nps_nota']) ?>
+          <span style="font-size:11px;font-weight:700;color:#92400e;margin-left:6px;"><?= (int)$os['nps_nota'] ?>/5</span>
+        </div>
+        <?php if ($os['nps_comentario']): ?>
+          <span style="font-size:12px;color:#78350f;border-left:2px solid #fcd34d;padding-left:10px;line-height:1.5;">
+            "<?= htmlspecialchars($os['nps_comentario']) ?>"
+          </span>
+        <?php endif; ?>
       </div>
     <?php endif; ?>
   </div>
