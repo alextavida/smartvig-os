@@ -22,6 +22,7 @@ export const CORES = {
   cinza700: '#3c4859',
   cinza500: '#6b7789',
   cinza300: '#cbd3dd',
+  cinza200: '#dde3eb',
   cinza100: '#eef1f5',
   branco: '#ffffff',
   verde: '#1e8e5a',

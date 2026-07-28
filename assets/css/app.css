@@ -487,3 +487,55 @@ tbody tr:hover { background: var(--azul-50); }
   .galeria .item { break-inside: avoid; }
   .galeria .item img { height: auto; max-height: 200px; }
 }
+
+/* ---------- form-control / form-label (bootstrap-compat aliases) ---------- */
+.form-control {
+  width: 100%;
+  padding: 11px 13px;
+  border-radius: var(--raio-sm);
+  border: 1px solid var(--cinza-300);
+  font-size: 14px;
+  font-family: var(--fonte);
+  background: var(--branco);
+  color: var(--cinza-900);
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.form-control:focus {
+  outline: none;
+  border-color: var(--azul-600);
+  box-shadow: 0 0 0 3px var(--azul-100);
+}
+.form-control:disabled { opacity: .5; cursor: not-allowed; }
+
+.form-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--cinza-700);
+  margin-bottom: 6px;
+}
+
+/* ---------- Badges de status de orçamento ---------- */
+.badge-orc {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.badge-orc.rascunho   { background: var(--cinza-badge-bg); color: var(--cinza-badge); }
+.badge-orc.enviado    { background: #dbeafe; color: #1d4ed8; }
+.badge-orc.aprovado   { background: var(--verde-bg); color: var(--verde); }
+.badge-orc.recusado   { background: var(--vermelho-bg); color: var(--vermelho); }
+.badge-orc.convertido { background: #ede9fe; color: #7c3aed; }
+
+/* ---------- Título de seção interna de card ---------- */
+.secao-label {
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: .3px;
+}

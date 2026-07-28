@@ -6,7 +6,7 @@
 
 declare(strict_types=1);
 
-$perfisPermitidosPagina = ['gestor'];
+$perfisPermitidosPagina = ['gestor', 'supervisor'];
 $tituloPagina = 'Ordens de Servico';
 $paginaAtiva = 'os_lista';
 require_once __DIR__ . '/../../includes/header.php';

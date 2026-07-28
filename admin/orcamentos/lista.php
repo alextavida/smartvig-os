@@ -25,13 +25,6 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $lista = $stmt->fetchAll();
 
-$cores = [
-    'rascunho'   => 'background:#f1f5f9;color:#64748b;',
-    'enviado'    => 'background:#dbeafe;color:#1d4ed8;',
-    'aprovado'   => 'background:#dcfce7;color:#16803c;',
-    'recusado'   => 'background:#fee2e2;color:#dc2626;',
-    'convertido' => 'background:#ede9fe;color:#7c3aed;',
-];
 $rotulosStatus = [
     'rascunho' => 'Rascunho', 'enviado' => 'Enviado',
     'aprovado' => 'Aprovado', 'recusado' => 'Recusado', 'convertido' => 'Convertido',
@@ -42,7 +35,7 @@ $baseUrl  = '/app-tecnicos';
 
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
   <form method="get" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-    <label style="font-size:13px;font-weight:600;color:#475569;">Status:</label>
+    <label class="form-label" style="margin-bottom:0;">Status:</label>
     <select name="status" class="form-control" style="width:auto;" onchange="this.form.submit()">
       <option value="">Todos</option>
       <?php foreach ($rotulosStatus as $k => $v): ?>
@@ -98,7 +91,7 @@ $baseUrl  = '/app-tecnicos';
             <?= $vencimento ?><?= $venceu ? ' <span style="font-size:10px;">(vencido)</span>' : '' ?>
           </td>
           <td>
-            <span style="<?= $cores[$orc['status']] ?? '' ?>;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:700;">
+            <span class="badge-orc <?= htmlspecialchars($orc['status']) ?>">
               <?= $rotulosStatus[$orc['status']] ?? $orc['status'] ?>
             </span>
           </td>

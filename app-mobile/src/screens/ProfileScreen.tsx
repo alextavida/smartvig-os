@@ -18,6 +18,7 @@ import {CORES} from '../config';
 
 const PERFIL_LABEL: Record<string, string> = {
   gestor: 'Gestor',
+  supervisor: 'Supervisor',
   tecnico: 'Técnico',
 };
 
@@ -108,7 +109,8 @@ export function ProfileScreen() {
     .toUpperCase() || 'U';
 
   const fotoUri = usuario?.foto_perfil ? urlMidia(usuario.foto_perfil) : null;
-  const isGestor = usuario?.perfil === 'gestor';
+  const isGestor    = usuario?.perfil === 'gestor';
+  const isSupervisor = usuario?.perfil === 'supervisor';
 
   return (
     <ScrollView style={estilos.container} contentContainerStyle={estilos.scroll}>
@@ -130,7 +132,7 @@ export function ProfileScreen() {
           {fotoUri ? (
             <Image source={{uri: fotoUri}} style={estilos.avatarGrande} />
           ) : (
-            <View style={[estilos.avatarGrande, isGestor ? estilos.avatarGestor : estilos.avatarTecnico]}>
+            <View style={[estilos.avatarGrande, isGestor ? estilos.avatarGestor : isSupervisor ? estilos.avatarSupervisor : estilos.avatarTecnico]}>
               <Text style={estilos.avatarIniciais}>{iniciais}</Text>
             </View>
           )}
@@ -140,8 +142,8 @@ export function ProfileScreen() {
         </TouchableOpacity>
         <Text style={estilos.nomeUsuario}>{usuario?.nome ?? '-'}</Text>
         <Text style={estilos.emailUsuario}>{usuario?.email ?? '-'}</Text>
-        <View style={[estilos.perfilBadge, isGestor && estilos.perfilBadgeGestor]}>
-          <Text style={[estilos.perfilBadgeText, isGestor && estilos.perfilBadgeTextGestor]}>
+        <View style={[estilos.perfilBadge, isGestor && estilos.perfilBadgeGestor, isSupervisor && estilos.perfilBadgeSupervisor]}>
+          <Text style={[estilos.perfilBadgeText, isGestor && estilos.perfilBadgeTextGestor, isSupervisor && estilos.perfilBadgeTextSupervisor]}>
             {PERFIL_LABEL[usuario?.perfil ?? 'tecnico']}
           </Text>
         </View>
@@ -265,8 +267,9 @@ const estilos = StyleSheet.create({
     shadowOpacity: 0.07, shadowRadius: 6, elevation: 2,
   },
   avatarGrande: {width: 96, height: 96, borderRadius: 48},
-  avatarTecnico: {backgroundColor: CORES.azul600, alignItems: 'center', justifyContent: 'center'},
-  avatarGestor: {backgroundColor: '#b8860b', alignItems: 'center', justifyContent: 'center'},
+  avatarTecnico:    {backgroundColor: CORES.azul600, alignItems: 'center', justifyContent: 'center'},
+  avatarGestor:     {backgroundColor: '#b8860b',     alignItems: 'center', justifyContent: 'center'},
+  avatarSupervisor: {backgroundColor: '#7c3aed',     alignItems: 'center', justifyContent: 'center'},
   avatarIniciais: {color: '#fff', fontSize: 32, fontWeight: '800'},
   avatarCamBadge: {
     position: 'absolute', bottom: 0, right: 0,
@@ -282,9 +285,11 @@ const estilos = StyleSheet.create({
     backgroundColor: CORES.azul100,
     borderRadius: 999, paddingHorizontal: 12, paddingVertical: 3,
   },
-  perfilBadgeGestor: {backgroundColor: '#fdf3d9'},
-  perfilBadgeText: {color: CORES.azul700, fontSize: 12, fontWeight: '700'},
-  perfilBadgeTextGestor: {color: '#b8860b'},
+  perfilBadgeGestor:     {backgroundColor: '#fdf3d9'},
+  perfilBadgeSupervisor: {backgroundColor: '#ede9fe'},
+  perfilBadgeText:             {color: CORES.azul700, fontSize: 12, fontWeight: '700'},
+  perfilBadgeTextGestor:     {color: '#b8860b'},
+  perfilBadgeTextSupervisor: {color: '#7c3aed'},
   card: {
     backgroundColor: CORES.branco, borderRadius: 14,
     padding: 16, marginBottom: 12,

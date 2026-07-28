@@ -26,13 +26,6 @@ $venceu = strtotime($orc['criado_em'] . ' +' . $orc['validade_dias'] . ' days') 
 $tel    = preg_replace('/\D/', '', $orc['cliente_telefone'] ?? '');
 $linkPortal = '/app-tecnicos/portal/orcamento.php?token=' . urlencode($orc['token']);
 
-$coresStatus = [
-    'rascunho'   => 'background:#f1f5f9;color:#64748b;',
-    'enviado'    => 'background:#dbeafe;color:#1d4ed8;',
-    'aprovado'   => 'background:#dcfce7;color:#16803c;',
-    'recusado'   => 'background:#fee2e2;color:#dc2626;',
-    'convertido' => 'background:#ede9fe;color:#7c3aed;',
-];
 $rotulosStatus = ['rascunho'=>'Rascunho','enviado'=>'Enviado','aprovado'=>'Aprovado','recusado'=>'Recusado','convertido'=>'Convertido'];
 $isGestor = $usuarioAtual['perfil'] === 'gestor';
 ?>
@@ -41,7 +34,7 @@ $isGestor = $usuarioAtual['perfil'] === 'gestor';
   <a href="/app-tecnicos/admin/orcamentos/lista.php" class="btn btn-neutro btn-sm">← Voltar</a>
   <h2 style="margin:0;font-size:16px;font-weight:800;flex:1;">
     <?= htmlspecialchars($orc['codigo']) ?>
-    <span style="<?= $coresStatus[$orc['status']] ?? '' ?>;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:700;margin-left:8px;">
+    <span class="badge-orc <?= htmlspecialchars($orc['status']) ?>" style="margin-left:8px;">
       <?= $rotulosStatus[$orc['status']] ?? $orc['status'] ?>
     </span>
   </h2>
@@ -58,7 +51,7 @@ $isGestor = $usuarioAtual['perfil'] === 'gestor';
 
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
   <div class="card">
-    <h3 style="margin:0 0 12px;font-size:13px;font-weight:700;color:#94a3b8;text-transform:uppercase;">Cliente</h3>
+    <h3 class="secao-label">Cliente</h3>
     <div style="font-size:15px;font-weight:700;margin-bottom:4px;"><?= htmlspecialchars($orc['cliente_nome']) ?></div>
     <?php if ($orc['cliente_telefone']): ?>
       <div style="font-size:13px;color:#64748b;"><?= htmlspecialchars($orc['cliente_telefone']) ?></div>
@@ -68,7 +61,7 @@ $isGestor = $usuarioAtual['perfil'] === 'gestor';
     <?php endif; ?>
   </div>
   <div class="card">
-    <h3 style="margin:0 0 12px;font-size:13px;font-weight:700;color:#94a3b8;text-transform:uppercase;">Detalhes</h3>
+    <h3 class="secao-label">Detalhes</h3>
     <div style="font-size:13px;line-height:2;">
       <div><b>Criado por:</b> <?= htmlspecialchars($orc['criado_por_nome'] ?? '-') ?></div>
       <div><b>Criado em:</b> <?= date('d/m/Y H:i', strtotime($orc['criado_em'])) ?></div>
@@ -127,22 +120,22 @@ $isGestor = $usuarioAtual['perfil'] === 'gestor';
 
 <?php if ($orc['observacoes']): ?>
 <div class="card">
-  <h3 style="margin:0 0 8px;font-size:13px;font-weight:700;color:#94a3b8;text-transform:uppercase;">Observações</h3>
+  <h3 class="secao-label">Observações</h3>
   <p style="font-size:13px;color:#475569;white-space:pre-wrap;margin:0;"><?= htmlspecialchars($orc['observacoes']) ?></p>
 </div>
 <?php endif; ?>
 
 <!-- Modal converter -->
-<div id="modal-converter" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:999;align-items:center;justify-content:center;">
-  <div style="background:#fff;border-radius:14px;padding:24px;max-width:400px;width:90%;box-shadow:0 16px 48px rgba(0,0,0,.2);">
-    <h3 style="margin:0 0 16px;font-size:15px;">Converter em OS</h3>
+<div id="modal-converter" class="modal-overlay">
+  <div class="modal-box" style="max-width:400px;">
+    <h3>Converter em OS</h3>
     <div style="margin-bottom:12px;">
       <label class="form-label">Agendamento (opcional)</label>
       <input type="date" id="data-agendamento" class="form-control">
     </div>
     <div style="display:flex;gap:8px;">
       <button onclick="confirmarConverter()" class="btn btn-primario" style="flex:1;">Converter</button>
-      <button onclick="document.getElementById('modal-converter').style.display='none'"
+      <button onclick="document.getElementById('modal-converter').classList.remove('aberto')"
               class="btn btn-neutro" style="flex:1;">Cancelar</button>
     </div>
   </div>
@@ -150,7 +143,7 @@ $isGestor = $usuarioAtual['perfil'] === 'gestor';
 
 <script>
 function converter() {
-  document.getElementById('modal-converter').style.display = 'flex';
+  document.getElementById('modal-converter').classList.add('aberto');
 }
 
 async function confirmarConverter() {

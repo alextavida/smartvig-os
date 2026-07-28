@@ -420,7 +420,7 @@ const estilos = StyleSheet.create({
   prioridadeBtn: {
     flex: 1, paddingVertical: 10,
     borderRadius: 999, alignItems: 'center',
-    borderWidth: 1.5, borderColor: CORES.cinza200 ?? CORES.cinza300,
+    borderWidth: 1.5, borderColor: CORES.cinza200,
     backgroundColor: CORES.cinza100,
   },
   prioridadeBtnText: {fontSize: 13, fontWeight: '600', color: CORES.cinza500},
