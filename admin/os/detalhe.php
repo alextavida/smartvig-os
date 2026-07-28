@@ -57,7 +57,8 @@ $rotulosAcao = [
     'os_criada' => 'OS criada', 'tecnicos_atribuidos' => 'Tecnicos redefinidos',
     'os_atualizada' => 'OS atualizada', 'descricao_atualizada' => 'Descricao atualizada',
     'os_pausada' => 'OS pausada', 'os_reagendada' => 'OS reagendada', 'os_iniciada' => 'OS iniciada',
-    'os_encerrada' => 'OS encerrada', 'midia_enviada' => 'Midia enviada',
+    'os_encerrada' => 'OS encerrada', 'os_cancelada' => 'OS cancelada',
+    'midia_enviada' => 'Midia enviada',
     'produto_adicionado' => 'Produto adicionado', 'falha_sincronizacao_gc' => 'Falha ao sincronizar com GestaoClick',
     'recebimento_gerado' => 'Recebimento gerado',
 ];
@@ -107,6 +108,18 @@ function inicialTecnico(string $nome): string
     <a href="/app-tecnicos/admin/os/imprimir.php?id=<?= (int) $os['id'] ?>" target="_blank" class="btn btn-neutro btn-sm">
       <?= ic('imprimir', 14) ?> Imprimir OS
     </a>
+    <?php if (!in_array($os['situacao_local'], ['cancelado', 'concluido'])): ?>
+    <button onclick="cancelarOS()" class="btn btn-neutro btn-sm" id="btn-cancelar"
+            style="background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+      Cancelar OS
+    </button>
+    <?php endif; ?>
+    <button onclick="deletarOS()" class="btn btn-neutro btn-sm" id="btn-deletar"
+            style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+      Deletar OS
+    </button>
     <a href="/app-tecnicos/admin/os/lista.php" class="btn btn-neutro btn-sm">
       <?= ic('voltar', 14) ?> Voltar
     </a>
@@ -208,7 +221,7 @@ function inicialTecnico(string $nome): string
 
   <div style="margin-bottom:12px;">
     <button type="button" onclick="abrirSugestaoTecnico()" class="btn btn-sm" style="background:#f0fdf4;color:#16803c;border:1px solid #bbf7d0;">
-      🎯 Sugerir técnico mais próximo
+      Sugerir técnico mais próximo
     </button>
   </div>
 
@@ -216,7 +229,7 @@ function inicialTecnico(string $nome): string
   <div id="modal-sugestao" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;align-items:center;justify-content:center;">
     <div style="background:#fff;border-radius:14px;padding:24px;max-width:500px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 16px 48px rgba(0,0,0,.25);">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-        <h3 style="margin:0;font-size:15px;">🎯 Distribuição Automática</h3>
+        <h3 style="margin:0;font-size:15px;">Distribuição Automática</h3>
         <button onclick="document.getElementById('modal-sugestao').style.display='none'"
                 style="background:none;border:none;cursor:pointer;font-size:20px;color:#64748b;">×</button>
       </div>
@@ -510,6 +523,38 @@ async function abrirSugestaoTecnico() {
 }
 
 function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+async function cancelarOS() {
+  const motivo = prompt('Motivo do cancelamento (opcional):');
+  if (motivo === null) { return; } // usuario clicou Cancelar no prompt
+  const alertaBox = document.getElementById('alertaDetalhe');
+  const btn = document.getElementById('btn-cancelar');
+  if (btn) { btn.disabled = true; btn.textContent = 'Cancelando...'; }
+  try {
+    await apiPost('/os/cancelar.php', { os_id: OS_ID, motivo });
+    alertaBox.innerHTML = '<div class="alerta alerta-sucesso">OS cancelada com sucesso.</div>';
+    setTimeout(() => window.location.reload(), 900);
+  } catch (e) {
+    alertaBox.innerHTML = '<div class="alerta alerta-erro">Erro: ' + e.message + '</div>';
+    if (btn) { btn.disabled = false; btn.textContent = 'Cancelar OS'; }
+  }
+}
+
+async function deletarOS() {
+  if (!confirm('ATENÇÃO: Esta ação é irreversível!\n\nDeseja realmente DELETAR permanentemente a OS #' + OS_ID + ' e todos os seus dados (histórico, fotos, produtos)?')) { return; }
+  if (!confirm('Confirmar exclusão definitiva da OS #' + OS_ID + '?')) { return; }
+  const alertaBox = document.getElementById('alertaDetalhe');
+  const btn = document.getElementById('btn-deletar');
+  if (btn) { btn.disabled = true; btn.textContent = 'Deletando...'; }
+  try {
+    await apiPost('/os/deletar.php', { os_id: OS_ID });
+    alertaBox.innerHTML = '<div class="alerta alerta-sucesso">OS deletada. Redirecionando...</div>';
+    setTimeout(() => { window.location.href = '/app-tecnicos/admin/os/lista.php'; }, 1500);
+  } catch (e) {
+    alertaBox.innerHTML = '<div class="alerta alerta-erro">Erro: ' + e.message + '</div>';
+    if (btn) { btn.disabled = false; btn.textContent = 'Deletar OS'; }
+  }
+}
 
 async function atribuirSugestao(tecId) {
   try {

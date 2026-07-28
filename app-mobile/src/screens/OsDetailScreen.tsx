@@ -22,7 +22,7 @@ import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
 import {
   visualizarOs, iniciarOs, pausarOs, reagendarOs, encerrarOs,
   salvarDescricao, adicionarProduto, atribuirTecnicos, buscarProdutosGC,
-  salvarTempo,
+  salvarTempo, cancelarOs, deletarOs,
 } from '../api/os';
 import {listarTecnicos} from '../api/tecnicos';
 import {atualizarGps} from '../api/gps';
@@ -47,6 +47,7 @@ const ROTULOS_ACAO: Record<string, string> = {
   os_atualizada: 'OS atualizada', tecnicos_atribuidos: 'Técnicos redefinidos',
   midia_enviada: 'Mídia enviada', produto_adicionado: 'Produto adicionado',
   descricao_atualizada: 'Descrição atualizada', falha_sincronizacao_gc: 'Falha de sincronização GC',
+  os_cancelada: 'OS cancelada', recebimento_gerado: 'Recebimento gerado',
 };
 
 export function OsDetailScreen({route, navigation}: Props) {
@@ -523,6 +524,55 @@ export function OsDetailScreen({route, navigation}: Props) {
                     <Text style={[estilos.botaoAcaoText, {color: CORES.verde}]}>Encerrar</Text>
                   </TouchableOpacity>
                 )}
+                {situacao !== 'cancelado' && (
+                  <TouchableOpacity
+                    style={[estilos.botaoAcao, {backgroundColor: '#fff7ed', borderColor: '#fed7aa', borderWidth: 1}]}
+                    disabled={salvando}
+                    onPress={() => {
+                      Alert.alert(
+                        'Cancelar OS',
+                        'Informe o motivo do cancelamento (opcional):',
+                        [
+                          {text: 'Voltar', style: 'cancel'},
+                          {
+                            text: 'Cancelar OS',
+                            style: 'destructive',
+                            onPress: () => acao(() => cancelarOs(osId, ''), 'OS cancelada!'),
+                          },
+                        ],
+                      );
+                    }}>
+                    <Text style={[estilos.botaoAcaoText, {color: '#c2410c'}]}>Cancelar OS</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity
+                  style={[estilos.botaoAcao, {backgroundColor: '#fef2f2', borderColor: '#fecaca', borderWidth: 1}]}
+                  disabled={salvando}
+                  onPress={() => {
+                    Alert.alert(
+                      'Deletar OS',
+                      'Esta ação é IRREVERSÍVEL. Todos os dados da OS (histórico, fotos, produtos) serão apagados permanentemente.',
+                      [
+                        {text: 'Voltar', style: 'cancel'},
+                        {
+                          text: 'Deletar permanentemente',
+                          style: 'destructive',
+                          onPress: async () => {
+                            setSalvando(true);
+                            try {
+                              await deletarOs(osId);
+                              navigation.goBack();
+                            } catch (e: any) {
+                              mostrarErro(e.message ?? 'Erro ao deletar.');
+                              setSalvando(false);
+                            }
+                          },
+                        },
+                      ],
+                    );
+                  }}>
+                  <Text style={[estilos.botaoAcaoText, {color: CORES.vermelho}]}>Deletar OS</Text>
+                </TouchableOpacity>
               </>
             )}
           </View>

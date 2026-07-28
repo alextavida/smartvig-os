@@ -12,6 +12,7 @@ import {ProfileScreen} from '../screens/ProfileScreen';
 import {CreateOsScreen} from '../screens/CreateOsScreen';
 import {ProdutividadeScreen} from '../screens/ProdutividadeScreen';
 import {MapaTecnicosScreen} from '../screens/MapaTecnicosScreen';
+import {DashboardGestorScreen} from '../screens/DashboardGestorScreen';
 import {useOfflineQueue} from '../hooks/useOfflineQueue';
 import {CORES} from '../config';
 
@@ -26,11 +27,28 @@ export type RootStackParamList = {
 export type AppTabParamList = {
   Home: undefined;
   Produtividade: undefined;
+  Dashboard: undefined;
+  MapaTecnicos: undefined;
   Profile: undefined;
 };
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 const AppTab   = createBottomTabNavigator<AppTabParamList>();
+
+const tabBarOptions = {
+  headerShown: false,
+  tabBarActiveTintColor: CORES.azul700,
+  tabBarInactiveTintColor: CORES.cinza500,
+  tabBarStyle: {
+    backgroundColor: CORES.branco,
+    borderTopColor: CORES.cinza100,
+    borderTopWidth: 1,
+    height: 62,
+    paddingBottom: 8,
+    paddingTop: 8,
+  },
+  tabBarLabelStyle: {fontSize: 11, fontWeight: '600' as const},
+};
 
 function TabIcon({icone, cor, pendentes}: {icone: string; cor: string; pendentes?: number}) {
   return (
@@ -52,25 +70,10 @@ function TabIcon({icone, cor, pendentes}: {icone: string; cor: string; pendentes
   );
 }
 
-function AppTabs() {
+function AppTabsTecnico() {
   const {pendentes} = useOfflineQueue();
-
   return (
-    <AppTab.Navigator
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: CORES.azul700,
-        tabBarInactiveTintColor: CORES.cinza500,
-        tabBarStyle: {
-          backgroundColor: CORES.branco,
-          borderTopColor: CORES.cinza100,
-          borderTopWidth: 1,
-          height: 62,
-          paddingBottom: 8,
-          paddingTop: 8,
-        },
-        tabBarLabelStyle: {fontSize: 11, fontWeight: '600'},
-      }}>
+    <AppTab.Navigator screenOptions={tabBarOptions}>
       <AppTab.Screen
         name="Home"
         component={HomeScreen}
@@ -103,6 +106,56 @@ function AppTabs() {
       />
     </AppTab.Navigator>
   );
+}
+
+function AppTabsGestor() {
+  const {pendentes} = useOfflineQueue();
+  return (
+    <AppTab.Navigator screenOptions={tabBarOptions}>
+      <AppTab.Screen
+        name="Home"
+        component={HomeScreen}
+        options={{
+          tabBarLabel: 'Ordens',
+          tabBarIcon: ({color}) => (
+            <TabIcon icone="assignment" cor={color} pendentes={pendentes.length} />
+          ),
+        }}
+      />
+      <AppTab.Screen
+        name="Dashboard"
+        component={DashboardGestorScreen}
+        options={{
+          tabBarLabel: 'Dashboard',
+          tabBarIcon: ({color}) => <TabIcon icone="dashboard" cor={color} />,
+        }}
+      />
+      <AppTab.Screen
+        name="MapaTecnicos"
+        component={MapaTecnicosScreen}
+        options={{
+          tabBarLabel: 'Mapa',
+          tabBarIcon: ({color}) => <TabIcon icone="location-on" cor={color} />,
+        }}
+      />
+      <AppTab.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{
+          tabBarLabel: 'Perfil',
+          tabBarIcon: ({color}) => <TabIcon icone="person" cor={color} />,
+        }}
+      />
+    </AppTab.Navigator>
+  );
+}
+
+function AppTabs() {
+  const {usuario} = useAuth();
+  if (usuario?.perfil === 'gestor') {
+    return <AppTabsGestor />;
+  }
+  return <AppTabsTecnico />;
 }
 
 export function Navigation() {
@@ -143,9 +196,7 @@ export function Navigation() {
             <RootStack.Screen
               name="MapaTecnicos"
               component={MapaTecnicosScreen}
-              options={{
-                headerShown: false,
-              }}
+              options={{headerShown: false}}
             />
           </>
         ) : (

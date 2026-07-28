@@ -7,9 +7,9 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
-  Linking,
-  Alert,
+  Modal,
 } from 'react-native';
+import {WebView} from 'react-native-webview';
 import {listarGps} from '../api/gps';
 import {GpsTecnico} from '../types';
 import {CORES} from '../config';
@@ -37,20 +37,9 @@ function etiquetaTempo(p: GpsTecnico): string {
   return `Há ${h}h${min % 60 > 0 ? String(min % 60) + 'min' : ''}`;
 }
 
-function abrirGoogleMaps(lat: number, lng: number, nome: string) {
-  const url = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
-  Linking.canOpenURL(url).then(ok => {
-    if (ok) {
-      Linking.openURL(url);
-    } else {
-      Alert.alert('Erro', 'Não foi possível abrir o Google Maps.');
-    }
-  });
-}
+type ItemProps = {p: GpsTecnico; onVerMapa: (lat: number, lng: number, nome: string) => void};
 
-type ItemProps = {p: GpsTecnico};
-
-function TecnicoCard({p}: ItemProps) {
+function TecnicoCard({p, onVerMapa}: ItemProps) {
   const online = isOnline(p);
   const temGps = !!(p.latitude && p.longitude);
 
@@ -80,9 +69,14 @@ function TecnicoCard({p}: ItemProps) {
         {temGps && (
           <TouchableOpacity
             style={estilos.btnMapa}
-            onPress={() => abrirGoogleMaps(parseFloat(String(p.latitude!)), parseFloat(String(p.longitude!)), p.tecnico_nome)}
+            onPress={() => onVerMapa(
+              parseFloat(String(p.latitude!)),
+              parseFloat(String(p.longitude!)),
+              p.tecnico_nome,
+            )}
             activeOpacity={0.75}>
-            <Text style={estilos.btnMapaText}>Ver no Maps</Text>
+            <Icon name="map" size={14} color={CORES.azul700} style={{marginRight: 4}} />
+            <Text style={estilos.btnMapaText}>Ver no mapa</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -95,6 +89,8 @@ export function MapaTecnicosScreen() {
   const [carregando, setCarregando] = useState(true);
   const [atualizando, setAtualizando] = useState(false);
   const [erro, setErro] = useState('');
+  const [mapaInfo, setMapaInfo] = useState<{lat: number; lng: number; nome: string} | null>(null);
+  const [mapaCarregado, setMapaCarregado] = useState(false);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const carregar = useCallback(async (silencioso = false) => {
@@ -121,8 +117,19 @@ export function MapaTecnicosScreen() {
     setAtualizando(false);
   };
 
+  const abrirMapa = (lat: number, lng: number, nome: string) => {
+    setMapaCarregado(false);
+    setMapaInfo({lat, lng, nome});
+  };
+
+  const fecharMapa = () => setMapaInfo(null);
+
   const online = tecnicos.filter(p => isOnline(p)).length;
   const total  = tecnicos.length;
+
+  const mapaUrl = mapaInfo
+    ? `https://maps.google.com/maps?q=${mapaInfo.lat},${mapaInfo.lng}&z=16&output=embed&hl=pt-BR`
+    : '';
 
   return (
     <View style={estilos.container}>
@@ -173,7 +180,7 @@ export function MapaTecnicosScreen() {
               tintColor={CORES.azul600}
             />
           }
-          renderItem={({item}) => <TecnicoCard p={item} />}
+          renderItem={({item}) => <TecnicoCard p={item} onVerMapa={abrirMapa} />}
           ListEmptyComponent={
             <View style={estilos.vazio}>
               <Icon name="location-off" size={48} color={CORES.cinza300} style={{marginBottom: 12}} />
@@ -185,6 +192,44 @@ export function MapaTecnicosScreen() {
           }
         />
       )}
+
+      {/* Modal com mapa embutido */}
+      <Modal
+        visible={!!mapaInfo}
+        animationType="slide"
+        onRequestClose={fecharMapa}>
+        <View style={estilos.modalContainer}>
+          <View style={estilos.modalHeader}>
+            <TouchableOpacity onPress={fecharMapa} style={estilos.modalVoltar}>
+              <Icon name="arrow-back" size={24} color="#fff" />
+            </TouchableOpacity>
+            <View style={{flex: 1}}>
+              <Text style={estilos.modalTitulo} numberOfLines={1}>
+                {mapaInfo?.nome ?? 'Localização'}
+              </Text>
+              <Text style={estilos.modalSub}>Posição em tempo real</Text>
+            </View>
+          </View>
+          <View style={{flex: 1}}>
+            {!mapaCarregado && (
+              <View style={estilos.mapaLoading}>
+                <ActivityIndicator size="large" color={CORES.azul600} />
+                <Text style={{color: CORES.cinza500, marginTop: 12}}>Carregando mapa...</Text>
+              </View>
+            )}
+            {mapaUrl ? (
+              <WebView
+                source={{uri: mapaUrl}}
+                style={estilos.webview}
+                onLoad={() => setMapaCarregado(true)}
+                javaScriptEnabled
+                domStorageEnabled
+                startInLoadingState={false}
+              />
+            ) : null}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -253,6 +298,8 @@ const estilos = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 999,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   btnMapaText: {fontSize: 12, fontWeight: '700', color: CORES.azul700},
 
@@ -265,4 +312,25 @@ const estilos = StyleSheet.create({
   vazio: {alignItems: 'center', paddingTop: 60},
   vazioText: {fontSize: 15, fontWeight: '700', color: CORES.cinza700, marginBottom: 6},
   vazioSub:  {fontSize: 13, color: CORES.cinza500, textAlign: 'center', maxWidth: 260},
+
+  // Modal do mapa
+  modalContainer: {flex: 1, backgroundColor: '#000'},
+  modalHeader: {
+    backgroundColor: CORES.azul800,
+    paddingTop: 52,
+    paddingBottom: 14,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  modalVoltar: {padding: 4},
+  modalTitulo: {color: '#fff', fontSize: 16, fontWeight: '700'},
+  modalSub:    {color: 'rgba(255,255,255,0.65)', fontSize: 12, marginTop: 2},
+  mapaLoading: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: CORES.azul50, zIndex: 1,
+  },
+  webview: {flex: 1},
 });

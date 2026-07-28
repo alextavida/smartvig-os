@@ -90,6 +90,14 @@ export async function salvarTempo(osId: number, segundos: number): Promise<void>
   await apiPost('/os/salvar_tempo.php', {os_id: osId, segundos});
 }
 
+export async function cancelarOs(osId: number, motivo?: string): Promise<void> {
+  await apiPost('/os/cancelar.php', {os_id: osId, motivo: motivo ?? ''});
+}
+
+export async function deletarOs(osId: number): Promise<void> {
+  await apiPost('/os/deletar.php', {os_id: osId});
+}
+
 export async function buscarProdutosGC(busca: string): Promise<ProdutoGC[]> {
   const qs = busca ? `?busca=${encodeURIComponent(busca)}` : '';
   const resultado = await apiGet<{produtos: any[]}>(`/produtos/listar.php${qs}`);
