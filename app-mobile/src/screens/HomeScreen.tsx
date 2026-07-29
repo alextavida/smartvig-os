@@ -3,6 +3,7 @@ import {
   View,
   Text,
   FlatList,
+  Image,
   StyleSheet,
   TouchableOpacity,
   RefreshControl,
@@ -10,6 +11,7 @@ import {
   ScrollView,
   TextInput,
 } from 'react-native';
+import {urlMidia} from '../api/midias';
 import Geolocation from '@react-native-community/geolocation';
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackScreenProps} from '@react-navigation/native-stack';
@@ -137,9 +139,16 @@ export function HomeScreen({navigation}: Props) {
               <Text style={estilos.notifNum}>{naoLidas > 99 ? '99+' : naoLidas}</Text>
             </View>
           )}
-          <View style={[estilos.avatar, isGestor && estilos.avatarGestor]}>
-            <Text style={estilos.avatarText}>{iniciais}</Text>
-          </View>
+          {usuario?.foto_perfil ? (
+            <Image
+              source={{uri: urlMidia(usuario.foto_perfil)}}
+              style={estilos.avatarFoto}
+            />
+          ) : (
+            <View style={[estilos.avatar, isGestor && estilos.avatarGestor]}>
+              <Text style={estilos.avatarText}>{iniciais}</Text>
+            </View>
+          )}
         </View>
       </View>
 
@@ -237,22 +246,23 @@ export function HomeScreen({navigation}: Props) {
       </View>
 
       {/* Abas de filtro */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={estilos.abasScroll}
-        contentContainerStyle={estilos.abasContainer}>
-        {ABAS.map(aba => (
-          <TouchableOpacity
-            key={aba.key}
-            style={[estilos.aba, abaAtiva === aba.key && estilos.abaAtiva]}
-            onPress={() => { setAbaAtiva(aba.key); setBusca(''); }}>
-            <Text style={[estilos.abaText, abaAtiva === aba.key && estilos.abaTextAtiva]}>
-              {aba.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+      <View style={estilos.abasWrapper}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={estilos.abasContainer}>
+          {ABAS.map(aba => (
+            <TouchableOpacity
+              key={aba.key}
+              style={[estilos.aba, abaAtiva === aba.key && estilos.abaAtiva]}
+              onPress={() => { setAbaAtiva(aba.key); setBusca(''); }}>
+              <Text style={[estilos.abaText, abaAtiva === aba.key && estilos.abaTextAtiva]}>
+                {aba.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
 
       {/* Lista */}
       {carregando ? (
@@ -351,6 +361,10 @@ const estilos = StyleSheet.create({
   },
   avatarGestor: {backgroundColor: '#b8860b'},
   avatarText: {color: '#fff', fontWeight: '700', fontSize: 14},
+  avatarFoto: {
+    width: 38, height: 38, borderRadius: 19,
+    borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)',
+  },
 
   // Banner offline
   bannerOffline: {
@@ -429,7 +443,11 @@ const estilos = StyleSheet.create({
     flex: 1, fontSize: 14, color: CORES.cinza900,
     paddingVertical: 6,
   },
-  abasScroll: {backgroundColor: CORES.branco, maxHeight: 52},
+  abasWrapper: {
+    backgroundColor: CORES.branco,
+    borderBottomWidth: 1,
+    borderBottomColor: CORES.cinza100,
+  },
   abasContainer: {paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', gap: 8},
   aba: {paddingHorizontal: 14, paddingVertical: 6, borderRadius: 999, backgroundColor: CORES.cinza100},
   abaAtiva: {backgroundColor: CORES.azul700},

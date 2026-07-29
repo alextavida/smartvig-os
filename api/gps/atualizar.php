@@ -31,7 +31,11 @@ $pdo = obterConexao();
 $stmt = $pdo->prepare(
     'INSERT INTO gps_tecnicos (tecnico_id, os_id, latitude, longitude)
      VALUES (:tecnico_id, :os_id, :latitude, :longitude)
-     ON DUPLICATE KEY UPDATE os_id = VALUES(os_id), latitude = VALUES(latitude), longitude = VALUES(longitude)'
+     ON DUPLICATE KEY UPDATE
+         os_id = VALUES(os_id),
+         latitude = VALUES(latitude),
+         longitude = VALUES(longitude),
+         atualizado_em = NOW()'
 );
 $stmt->execute([
     'tecnico_id' => $payload['usuario_id'],
