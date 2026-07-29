@@ -24,9 +24,26 @@ exigirCampos($dados, ['os_id']);
 $osId = (int) $dados['os_id'];
 $pdo  = obterConexao();
 
-$stmt = $pdo->prepare('SELECT id FROM ordens_servico WHERE id = :id LIMIT 1');
+$stmt = $pdo->prepare('SELECT id, gc_os_id FROM ordens_servico WHERE id = :id LIMIT 1');
 $stmt->execute(['id' => $osId]);
-if (!$stmt->fetch()) { responderErro('OS nao encontrada.', 404); }
+$os = $stmt->fetch();
+if (!$os) { responderErro('OS nao encontrada.', 404); }
+
+// Tenta cancelar no GestaoClick antes de deletar localmente (nao fatal)
+if ((int) ($os['gc_os_id'] ?? 0) > 0) {
+    try {
+        require_once __DIR__ . '/../../config/os_helpers.php';
+        $situacaoGcId = obterSituacaoGcId('cancelado');
+        if ($situacaoGcId !== null) {
+            (new GestaoClickAPI())->atualizarOS((int) $os['gc_os_id'], [
+                'situacao_id' => $situacaoGcId,
+                'observacoes' => 'OS removida do SmartVig.',
+            ]);
+        }
+    } catch (Throwable $gcErr) {
+        // Falha no GC nao impede a delecao local
+    }
+}
 
 $pdo->beginTransaction();
 try {

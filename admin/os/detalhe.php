@@ -100,10 +100,30 @@ function inicialTecnico(string $nome): string
     </button>
     <?php endif; ?>
     <?php if (!empty($os['portal_token'])): ?>
-    <a href="https://wa.me/?text=<?= urlencode('Olá! Acompanhe o status da sua OS em tempo real: ' . (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'] . '/app-tecnicos/portal/os.php?token=' . $os['portal_token']) ?>"
+    <?php
+      $proto     = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
+      $baseUrl   = $proto . '://' . $_SERVER['HTTP_HOST'] . '/app-tecnicos';
+      $portalUrl = $baseUrl . '/portal/cliente.php?token=' . $os['portal_token'];
+      $npsExtra  = !empty($os['nps_token']) ? '&nps=' . $os['nps_token'] : '';
+      $waMsgPortal = 'Olá ' . explode(' ', trim($os['cliente_nome']))[0] . '! Acompanhe o status da sua OS em tempo real: ' . $portalUrl;
+      $waMsgNps    = 'Olá ' . explode(' ', trim($os['cliente_nome']))[0] . '! Como foi o atendimento? Avalie em: ' . $portalUrl . $npsExtra;
+    ?>
+    <a href="https://wa.me/?text=<?= urlencode($waMsgPortal) ?>"
        target="_blank" class="btn btn-neutro btn-sm" style="background:#e6f4ea;color:#1e8e5a;">
       Enviar portal ao cliente
     </a>
+    <button onclick="copiarLink('<?= htmlspecialchars($portalUrl, ENT_QUOTES) ?>')"
+            class="btn btn-neutro btn-sm" title="Copiar link do portal">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+      Copiar link
+    </button>
+    <?php if (!empty($os['nps_token']) && $os['situacao_local'] === 'concluido'): ?>
+    <a href="https://wa.me/?text=<?= urlencode($waMsgNps) ?>"
+       target="_blank" class="btn btn-neutro btn-sm" style="background:#fef9c3;color:#854d0e;">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      Enviar NPS
+    </a>
+    <?php endif; ?>
     <?php endif; ?>
     <a href="/app-tecnicos/admin/os/imprimir.php?id=<?= (int) $os['id'] ?>" target="_blank" class="btn btn-neutro btn-sm">
       <?= ic('imprimir', 14) ?> Imprimir OS
@@ -523,6 +543,14 @@ async function abrirSugestaoTecnico() {
 }
 
 function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function copiarLink(url) {
+  navigator.clipboard.writeText(url).then(() => {
+    const alerta = document.getElementById('alertaDetalhe');
+    alerta.innerHTML = '<div class="alert alert-success" style="margin:8px 0;">Link copiado para a área de transferência!</div>';
+    setTimeout(() => { alerta.innerHTML = ''; }, 3000);
+  }).catch(() => { prompt('Copie o link abaixo:', url); });
+}
 
 async function cancelarOS() {
   const motivo = prompt('Motivo do cancelamento (opcional):');

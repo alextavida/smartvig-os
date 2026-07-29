@@ -13,6 +13,7 @@ import {CreateOsScreen} from '../screens/CreateOsScreen';
 import {ProdutividadeScreen} from '../screens/ProdutividadeScreen';
 import {MapaTecnicosScreen} from '../screens/MapaTecnicosScreen';
 import {DashboardGestorScreen} from '../screens/DashboardGestorScreen';
+import {ClienteHistoricoScreen} from '../screens/ClienteHistoricoScreen';
 import {useOfflineQueue} from '../hooks/useOfflineQueue';
 import {CORES} from '../config';
 
@@ -22,6 +23,7 @@ export type RootStackParamList = {
   OsDetail: {osId: number};
   CreateOs: undefined;
   MapaTecnicos: undefined;
+  ClienteHistorico: {gcClienteId: number; clienteNome: string};
 };
 
 export type AppTabParamList = {
@@ -197,6 +199,18 @@ export function Navigation() {
               name="MapaTecnicos"
               component={MapaTecnicosScreen}
               options={{headerShown: false}}
+            />
+            <RootStack.Screen
+              name="ClienteHistorico"
+              component={ClienteHistoricoScreen}
+              options={{
+                headerShown: true,
+                title: 'Histórico do Cliente',
+                headerBackTitle: 'Voltar',
+                headerTintColor: CORES.azul700,
+                headerStyle: {backgroundColor: CORES.branco},
+                headerTitleStyle: {fontWeight: '800', color: CORES.cinza900, fontSize: 16},
+              }}
             />
           </>
         ) : (

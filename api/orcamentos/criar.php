@@ -11,6 +11,7 @@ require_once __DIR__ . '/../../config/cors.php';
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../config/response.php';
 require_once __DIR__ . '/../../config/auth.php';
+require_once __DIR__ . '/../../config/gestaoclick.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     responderErro('Use POST.', 405);
@@ -62,4 +63,33 @@ foreach ((array) $dados['itens'] as $item) {
     ]);
 }
 
-responderSucesso(['id' => $orcId, 'codigo' => $codigo, 'token' => $token]);
+// Envia para o GestaoClick se houver cliente GC vinculado
+$gcOrcamentoId = null;
+$gcClienteIdOrc = (int) ($dados['gc_cliente_id'] ?? 0);
+if ($gcClienteIdOrc > 0) {
+    try {
+        $itensProdutos = [];
+        foreach ((array) $dados['itens'] as $item) {
+            if (empty($item['descricao'])) { continue; }
+            $itensProdutos[] = [
+                'descricao'      => trim($item['descricao']),
+                'quantidade'     => max(0.01, (float) ($item['quantidade'] ?? 1)),
+                'valor_unitario' => max(0, (float) ($item['valor_unitario'] ?? 0)),
+            ];
+        }
+        $gcResp = (new GestaoClickAPI())->criarOrcamento([
+            'cliente_id'  => $gcClienteIdOrc,
+            'observacoes' => $dados['observacoes'] ?? '',
+            'itens'       => $itensProdutos,
+        ]);
+        $gcOrcamentoId = $gcResp['id'] ?? ($gcResp['data']['id'] ?? null);
+        if ($gcOrcamentoId) {
+            $pdo->prepare('UPDATE orcamentos SET gc_orcamento_id = :gcid WHERE id = :id')
+                ->execute(['gcid' => $gcOrcamentoId, 'id' => $orcId]);
+        }
+    } catch (GestaoClickApiException $e) {
+        // Falha no GC nao impede criacao local
+    }
+}
+
+responderSucesso(['id' => $orcId, 'codigo' => $codigo, 'token' => $token, 'gc_orcamento_id' => $gcOrcamentoId]);

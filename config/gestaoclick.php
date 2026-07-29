@@ -168,4 +168,19 @@ class GestaoClickAPI
     {
         return $this->post('clientes/', $dados);
     }
+
+    public function criarOrcamento(array $dados): array
+    {
+        return $this->post('orcamentos/', $dados);
+    }
+
+    public function listarRecebimentos(array $parametros = []): array
+    {
+        return $this->get('recebimentos/', $parametros);
+    }
+
+    public function listarTiposPagamento(): array
+    {
+        return $this->get('tipos_pagamento/');
+    }
 }

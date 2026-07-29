@@ -10,6 +10,7 @@ export interface Usuario {
 export interface OS {
   id: number;
   gc_os_id: number;
+  gc_cliente_id?: number | null;
   codigo?: string;
   cliente_nome: string;
   cliente_endereco: string;
@@ -20,6 +21,8 @@ export interface OS {
   data_conclusao: string | null;
   observacoes: string | null;
   motivo_pausa: string | null;
+  nps_token?: string | null;
+  portal_token?: string | null;
   produtos_json: string | null;
   tecnico_id?: number | null;
   tecnico_responsavel_nome?: string | null;

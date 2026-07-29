@@ -100,6 +100,9 @@ export function OsDetailScreen({route, navigation}: Props) {
   // Foto com anotações
   const [fotoBase64Para, setFotoBase64Para]   = useState('');
   const [modalAnotacao, setModalAnotacao]     = useState(false);
+  // Checklist
+  const [checklist, setChecklist] = useState<{texto: string; concluido: boolean}[]>([]);
+  const [salvandoCheck, setSalvandoCheck] = useState<number | null>(null);
 
   const gpsTimer  = useRef<ReturnType<typeof setInterval> | null>(null);
   const timerRef  = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -115,6 +118,12 @@ export function OsDetailScreen({route, navigation}: Props) {
       const dados = await visualizarOs(osId);
       setOs(dados);
       setDescricao(dados.observacoes ?? '');
+      // Carrega checklist junto
+      try {
+        const {apiGet: apiGetFn} = await import('../api/client');
+        const ck = await apiGetFn<{itens: {texto: string; concluido: boolean}[]}>(`/os/checklist.php?os_id=${osId}`);
+        setChecklist(ck.itens ?? []);
+      } catch { /* sem checklist */ }
     } catch (e: any) {
       setErro(e.message ?? 'Erro ao carregar OS.');
     } finally {
@@ -328,6 +337,18 @@ export function OsDetailScreen({route, navigation}: Props) {
     });
   }
 
+  async function toggleChecklistItem(idx: number) {
+    const novo = !checklist[idx].concluido;
+    const atualizado = checklist.map((item, i) => i === idx ? {...item, concluido: novo} : item);
+    setChecklist(atualizado);
+    setSalvandoCheck(idx);
+    try {
+      const {apiPost: apiPostFn} = await import('../api/client');
+      await apiPostFn('/os/checklist.php', {os_id: osId, item_idx: idx, concluido: novo});
+    } catch { setChecklist(checklist); } // reverte se falhar
+    finally { setSalvandoCheck(null); }
+  }
+
   function selecionarProdutoGC(p: ProdutoGC) {
     setProdNome(p.nome);
     setProdValor(String(p.valor_venda));
@@ -414,15 +435,15 @@ export function OsDetailScreen({route, navigation}: Props) {
             <Text style={estilos.infoText}>{dataFormatada}</Text>
           </View>
 
-          <View style={{flexDirection: 'row', gap: 8, marginTop: 10}}>
+          <View style={{flexDirection: 'row', gap: 8, marginTop: 10, flexWrap: 'wrap'}}>
             {os.cliente_endereco ? (
-              <TouchableOpacity style={[estilos.botaoRota, {flex: 1}]} onPress={abrirRota}>
+              <TouchableOpacity style={[estilos.botaoRota, {flex: 1, minWidth: 80}]} onPress={abrirRota}>
                 <Text style={estilos.botaoRotaText}>Rota</Text>
               </TouchableOpacity>
             ) : null}
             {os.cliente_telefone ? (
               <TouchableOpacity
-                style={[estilos.botaoRota, {flex: 1, backgroundColor: '#e6f4ea'}]}
+                style={[estilos.botaoRota, {flex: 1, minWidth: 80, backgroundColor: '#e6f4ea'}]}
                 onPress={() => {
                   const num = os.cliente_telefone!.replace(/\D/g, '');
                   Linking.openURL(`https://wa.me/55${num}`);
@@ -432,9 +453,19 @@ export function OsDetailScreen({route, navigation}: Props) {
             ) : null}
             {os.cliente_telefone ? (
               <TouchableOpacity
-                style={[estilos.botaoRota, {flex: 1}]}
+                style={[estilos.botaoRota, {flex: 1, minWidth: 80}]}
                 onPress={() => Linking.openURL(`tel:${os.cliente_telefone}`)}>
                 <Text style={estilos.botaoRotaText}>Ligar</Text>
+              </TouchableOpacity>
+            ) : null}
+            {os.gc_cliente_id ? (
+              <TouchableOpacity
+                style={[estilos.botaoRota, {flex: 1, minWidth: 80, backgroundColor: '#eff6ff'}]}
+                onPress={() => navigation.navigate('ClienteHistorico', {
+                  gcClienteId: os.gc_cliente_id!,
+                  clienteNome: os.cliente_nome ?? 'Cliente',
+                })}>
+                <Text style={[estilos.botaoRotaText, {color: CORES.azul700}]}>Histórico</Text>
               </TouchableOpacity>
             ) : null}
           </View>
@@ -703,6 +734,37 @@ export function OsDetailScreen({route, navigation}: Props) {
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* Checklist */}
+        {checklist.length > 0 && (
+          <View style={estilos.card}>
+            <Text style={estilos.secaoTitulo}>
+              Checklist ({checklist.filter(i => i.concluido).length}/{checklist.length})
+            </Text>
+            {checklist.map((item, idx) => (
+              <TouchableOpacity
+                key={idx}
+                style={estilos.checkRow}
+                onPress={() => toggleChecklistItem(idx)}
+                disabled={salvandoCheck === idx || ['concluido', 'cancelado'].includes(situacao)}>
+                <View style={[estilos.checkCircle, item.concluido && estilos.checkCircleFeito]}>
+                  {item.concluido && <Icon name="check" size={14} color="#fff" />}
+                  {salvandoCheck === idx && <ActivityIndicator size="small" color="#fff" />}
+                </View>
+                <Text style={[estilos.checkTexto, item.concluido && estilos.checkTextoFeito]}>
+                  {item.texto}
+                </Text>
+              </TouchableOpacity>
+            ))}
+            {checklist.length > 0 && (
+              <View style={estilos.checkProgress}>
+                <View style={[estilos.checkProgressBar, {
+                  width: `${Math.round((checklist.filter(i => i.concluido).length / checklist.length) * 100)}%` as any,
+                }]} />
+              </View>
+            )}
+          </View>
+        )}
 
         {/* Produtos */}
         <View style={estilos.card}>
@@ -1337,6 +1399,22 @@ const estilos = StyleSheet.create({
     color: '#92400e', fontWeight: '900', fontSize: 22, letterSpacing: 2, fontVariant: ['tabular-nums'],
   },
   timerLabel: {color: '#92400e', fontSize: 11, marginTop: 2, opacity: 0.8},
+  checkRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingVertical: 9, borderBottomWidth: 1, borderColor: CORES.cinza100,
+  },
+  checkCircle: {
+    width: 24, height: 24, borderRadius: 12,
+    borderWidth: 2, borderColor: CORES.cinza300,
+    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+  },
+  checkCircleFeito: {backgroundColor: CORES.verde, borderColor: CORES.verde},
+  checkTexto: {flex: 1, fontSize: 13.5, color: CORES.cinza900},
+  checkTextoFeito: {color: CORES.cinza500, textDecorationLine: 'line-through'},
+  checkProgress: {
+    height: 4, backgroundColor: CORES.cinza100, borderRadius: 2, marginTop: 10, overflow: 'hidden',
+  },
+  checkProgressBar: {height: 4, backgroundColor: CORES.verde, borderRadius: 2},
   histRow: {marginBottom: 8},
   histAcao: {fontWeight: '700', fontSize: 13, color: CORES.cinza900},
   histDetalhe: {fontSize: 12.5, color: CORES.cinza700, marginTop: 1},

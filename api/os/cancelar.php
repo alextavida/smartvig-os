@@ -11,6 +11,7 @@ require_once __DIR__ . '/../../config/cors.php';
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../config/response.php';
 require_once __DIR__ . '/../../config/auth.php';
+require_once __DIR__ . '/../../config/gestaoclick.php';
 require_once __DIR__ . '/../../config/os_helpers.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -27,7 +28,7 @@ try {
     $motivo = trim((string) ($dados['motivo'] ?? ''));
     $pdo    = obterConexao();
 
-    $stmt = $pdo->prepare('SELECT id, situacao_local FROM ordens_servico WHERE id = :id LIMIT 1');
+    $stmt = $pdo->prepare('SELECT id, situacao_local, gc_os_id FROM ordens_servico WHERE id = :id LIMIT 1');
     $stmt->execute(['id' => $osId]);
     $os = $stmt->fetch();
 
@@ -38,8 +39,24 @@ try {
         ->execute(['id' => $osId]);
 
     registrarHistorico($pdo, $osId, (int) $payload['usuario_id'], 'os_cancelada', $motivo ?: 'Cancelada pelo gestor');
+    notificarTecnicosDaOs($pdo, $osId, 'cancelada', 'OS cancelada', 'A OS #' . $osId . ' foi cancelada pelo gestor.');
 
-    responderSucesso(['os_id' => $osId]);
+    $erroSincronizacao = null;
+    $situacaoGcId = obterSituacaoGcId('cancelado');
+    if ((int) ($os['gc_os_id'] ?? 0) > 0 && $situacaoGcId !== null) {
+        try {
+            (new GestaoClickAPI())->atualizarOS((int) $os['gc_os_id'], [
+                'situacao_id' => $situacaoGcId,
+                'observacoes' => $motivo ?: 'Cancelada pelo gestor',
+            ]);
+            $pdo->prepare('UPDATE ordens_servico SET sincronizado_gc = 1 WHERE id = :id')->execute(['id' => $osId]);
+        } catch (GestaoClickApiException $e) {
+            $erroSincronizacao = $e->getMessage();
+            registrarHistorico($pdo, $osId, null, 'falha_sincronizacao_gc', $erroSincronizacao);
+        }
+    }
+
+    responderSucesso(['os_id' => $osId, 'erro_sincronizacao' => $erroSincronizacao]);
 
 } catch (Throwable $e) {
     responderErro('Erro interno: ' . $e->getMessage(), 500);
