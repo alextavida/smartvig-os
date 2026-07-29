@@ -93,8 +93,8 @@ function inicialTec(string $nome): string {
           <td>
             <div class="acoes-tabela">
               <button class="btn-icone" title="Editar" onclick="abrirModalEditar(<?= htmlspecialchars(json_encode(['id'=>(int)$t['id'],'nome'=>$t['nome'],'email'=>$t['email'],'telefone'=>$t['telefone']??'','ativo'=>(bool)$t['ativo'],'perfil'=>$t['perfil'],'ehEuMesmo'=>((int)$t['id']===$usuarioAtualId)])) ?>)"><?= ic('editar', 15) ?></button>
-              <button class="btn-icone" title="Foto de perfil" onclick="abrirModalFoto(<?= (int) $t['id'] ?>, <?= json_encode($t['nome']) ?>)"><?= ic('foto', 15) ?></button>
-              <button class="btn-icone" title="Redefinir senha" onclick="abrirModalSenha(<?= (int) $t['id'] ?>, <?= json_encode($t['nome']) ?>)"><?= ic('cadeado', 15) ?></button>
+              <button class="btn-icone" title="Foto de perfil" onclick="abrirModalFoto(<?= (int) $t['id'] ?>, <?= htmlspecialchars(json_encode($t['nome']), ENT_QUOTES) ?>)"><?= ic('foto', 15) ?></button>
+              <button class="btn-icone" title="Redefinir senha" onclick="abrirModalSenha(<?= (int) $t['id'] ?>, <?= htmlspecialchars(json_encode($t['nome']), ENT_QUOTES) ?>)"><?= ic('cadeado', 15) ?></button>
             </div>
           </td>
         </tr>
