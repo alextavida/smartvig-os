@@ -170,6 +170,13 @@ try {
             $clienteTelefone = ($clienteTelefone !== '' ? $clienteTelefone : null);
             $clienteEndereco = ($clienteEndereco !== '' ? $clienteEndereco : null);
 
+            // GestãoClick usa "CONSUMIDOR" como cliente padrão quando não há cliente real.
+            // Nunca sobrescrever o nome local com esse valor genérico.
+            $nomesGenericos = ['CONSUMIDOR', 'CONSUMIDOR FINAL', 'SEM CLIENTE', 'NÃO INFORMADO', 'NAO INFORMADO'];
+            if ($clienteNome !== null && in_array(mb_strtoupper(trim($clienteNome)), $nomesGenericos, true)) {
+                $clienteNome = null;
+            }
+
             // --- Upsert ---
             $stmt = $pdo->prepare('SELECT id, situacao_local FROM ordens_servico WHERE gc_os_id = :gc_os_id LIMIT 1');
             $stmt->execute(['gc_os_id' => $gcOsId]);

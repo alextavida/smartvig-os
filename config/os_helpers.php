@@ -121,7 +121,7 @@ function buscarOsOuFalhar(PDO $pdo, int $osId, array $payloadJwt): array
 function listarTecnicosDaOs(PDO $pdo, int $osId): array
 {
     $stmt = $pdo->prepare(
-        'SELECT u.id, u.nome, u.email, ot.responsavel
+        'SELECT u.id, u.nome, u.email, u.foto_perfil, ot.responsavel
          FROM os_tecnicos ot
          INNER JOIN usuarios u ON u.id = ot.tecnico_id
          WHERE ot.os_id = :os_id

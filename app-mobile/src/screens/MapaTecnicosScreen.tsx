@@ -127,8 +127,16 @@ export function MapaTecnicosScreen() {
   const online = tecnicos.filter(p => isOnline(p)).length;
   const total  = tecnicos.length;
 
-  const mapaUrl = mapaInfo
-    ? `https://maps.google.com/maps?q=${mapaInfo.lat},${mapaInfo.lng}&z=16&output=embed&hl=pt-BR`
+  // Google Maps Embed exige ser carregado dentro de um <iframe>
+  // Se o WebView carregar a URL diretamente (sem iframe) o Google bloqueia com erro
+  const mapaHtml = mapaInfo
+    ? `<!DOCTYPE html><html><head>
+        <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+        <style>*{margin:0;padding:0}html,body{width:100%;height:100%;background:#000}
+        iframe{width:100%;height:100%;border:0}</style></head>
+        <body><iframe
+          src="https://maps.google.com/maps?q=${mapaInfo.lat},${mapaInfo.lng}&z=16&output=embed&hl=pt-BR"
+          allowfullscreen loading="lazy"></iframe></body></html>`
     : '';
 
   return (
@@ -217,14 +225,15 @@ export function MapaTecnicosScreen() {
                 <Text style={{color: CORES.cinza500, marginTop: 12}}>Carregando mapa...</Text>
               </View>
             )}
-            {mapaUrl ? (
+            {mapaHtml ? (
               <WebView
-                source={{uri: mapaUrl}}
+                source={{html: mapaHtml}}
                 style={estilos.webview}
                 onLoad={() => setMapaCarregado(true)}
                 javaScriptEnabled
                 domStorageEnabled
                 startInLoadingState={false}
+                originWhitelist={['*']}
               />
             ) : null}
           </View>

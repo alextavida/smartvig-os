@@ -26,7 +26,7 @@ import {
 } from '../api/os';
 import {listarTecnicos} from '../api/tecnicos';
 import {atualizarGps} from '../api/gps';
-import {uploadMidia, uploadBase64Midia} from '../api/midias';
+import {uploadMidia, uploadBase64Midia, urlMidia} from '../api/midias';
 import {OSDetalhe, TecnicoLista, ProdutoGC, GCEquipamento} from '../types';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {StatusBadge} from '../components/StatusBadge';
@@ -267,8 +267,11 @@ export function OsDetailScreen({route, navigation}: Props) {
 
   async function enviarMidia(fonte: 'camera' | 'galeria', comAnotacao = false) {
     const fn = fonte === 'camera' ? launchCamera : launchImageLibrary;
-    const incluiBase64 = comAnotacao || fonte === 'camera';
-    fn({mediaType: 'mixed', quality: 0.8, includeBase64: incluiBase64}, async response => {
+    // launchCamera só aceita 'photo' ou 'video' — 'mixed' causa falha silenciosa no Android
+    const opcoes = fonte === 'camera'
+      ? {mediaType: 'photo' as const, quality: 0.8 as const, includeBase64: comAnotacao}
+      : {mediaType: 'mixed' as const, quality: 0.8 as const, includeBase64: false as const};
+    fn(opcoes, async response => {
       if (response.didCancel || !response.assets?.[0]) {return;}
       const asset = response.assets[0];
       const tipo = asset.type?.startsWith('video') ? 'video' : 'foto';
@@ -845,11 +848,18 @@ export function OsDetailScreen({route, navigation}: Props) {
             </View>
             {os.tecnicos.map(t => (
               <View key={t.id} style={estilos.tecnicoRow}>
-                <View style={estilos.tecnicoAvatar}>
-                  <Text style={estilos.tecnicoIniciais}>
-                    {t.nome.split(' ').slice(0, 2).map(p => p[0]).join('').toUpperCase()}
-                  </Text>
-                </View>
+                {t.foto_perfil ? (
+                  <Image
+                    source={{uri: urlMidia(t.foto_perfil)}}
+                    style={estilos.tecnicoFoto}
+                  />
+                ) : (
+                  <View style={estilos.tecnicoAvatar}>
+                    <Text style={estilos.tecnicoIniciais}>
+                      {t.nome.split(' ').slice(0, 2).map(p => p[0]).join('').toUpperCase()}
+                    </Text>
+                  </View>
+                )}
                 <View>
                   <Text style={estilos.tecnicoNome}>{t.nome}</Text>
                   {t.responsavel && <Text style={estilos.tecnicoResp}>Responsável</Text>}
@@ -1365,6 +1375,7 @@ const estilos = StyleSheet.create({
     width: 36, height: 36, borderRadius: 18,
     backgroundColor: CORES.azul600, alignItems: 'center', justifyContent: 'center',
   },
+  tecnicoFoto: {width: 36, height: 36, borderRadius: 18},
   tecnicoIniciais: {color: '#fff', fontWeight: '700', fontSize: 13},
   tecnicoNome: {fontWeight: '600', fontSize: 13.5, color: CORES.cinza900},
   tecnicoResp: {fontSize: 11, color: CORES.azul700, fontWeight: '700'},
