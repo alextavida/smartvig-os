@@ -18,8 +18,9 @@ export async function uploadFotoPerfil(
 ): Promise<string> {
   const fd = new FormData();
   fd.append('arquivo', arquivo as any);
-  const dados = await apiUpload<{url: string}>('/tecnicos/upload_foto.php', fd);
-  return dados.url;
+  // Retorna o caminho relativo (ex: 'imgs/avatares/1.jpg') para uso com urlMidia()
+  const dados = await apiUpload<{foto_perfil: string; url: string}>('/tecnicos/upload_foto.php', fd);
+  return dados.foto_perfil;
 }
 
 /** Envia imagem em base64 (ex: assinatura digital) como mídia da OS */

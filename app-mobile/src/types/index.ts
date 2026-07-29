@@ -111,6 +111,7 @@ export interface TecnicoLista {
   telefone: string | null;
   ativo: boolean | number;
   os_ativas: number;
+  foto_perfil?: string | null;
 }
 
 export interface ClienteGC {

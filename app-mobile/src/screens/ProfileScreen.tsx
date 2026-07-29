@@ -48,13 +48,11 @@ export function ProfileScreen() {
       setSalvando(true);
       setErro('');
       try {
-        const urlPublica = await uploadFotoPerfil({
+        const caminhoRelativo = await uploadFotoPerfil({
           uri: asset.uri!,
           name: asset.fileName ?? 'foto_perfil.jpg',
           type: asset.type ?? 'image/jpeg',
         });
-        // Extrai o caminho relativo da URL completa para sincronizar no contexto
-        const caminhoRelativo = urlPublica.replace(/^https?:\/\/[^/]+\/app-tecnicos\//, '');
         await atualizarUsuario({foto_perfil: caminhoRelativo});
         mostrarSucesso('Foto de perfil atualizada!');
       } catch (e: any) {

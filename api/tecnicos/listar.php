@@ -20,7 +20,7 @@ exigirPerfil($payload, ['gestor']);
 
 $pdo = obterConexao();
 $stmt = $pdo->query(
-    "SELECT id, nome, email, telefone, ativo,
+    "SELECT id, nome, email, telefone, ativo, foto_perfil,
             (SELECT COUNT(*) FROM os_tecnicos ot
              INNER JOIN ordens_servico o ON o.id = ot.os_id
              WHERE ot.tecnico_id = usuarios.id AND o.situacao_local IN ('aberto','em_andamento','pausado','reagendado')

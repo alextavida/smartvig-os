@@ -12,7 +12,8 @@ require_once __DIR__ . '/config/guard.php';
 iniciarSessaoSegura();
 
 if (!empty($_SESSION['usuario_id'])) {
-    $destino = $_SESSION['usuario_perfil'] === 'gestor' ? '/app-tecnicos/admin/' : '/app-tecnicos/tecnico/';
+    $isAdmin = in_array($_SESSION['usuario_perfil'], ['gestor', 'supervisor'], true);
+    $destino = $isAdmin ? '/app-tecnicos/admin/' : '/app-tecnicos/tecnico/';
     header('Location: ' . $destino);
     exit;
 }
@@ -42,7 +43,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['usuario_perfil'] = $usuario['perfil'];
             $_SESSION['usuario_jwt'] = gerarJwt((int) $usuario['id'], $usuario['perfil'], $usuario['nome'], $usuario['email']);
 
-            $destino = $usuario['perfil'] === 'gestor' ? '/app-tecnicos/admin/' : '/app-tecnicos/tecnico/';
+            $isAdmin = in_array($usuario['perfil'], ['gestor', 'supervisor'], true);
+            $destino = $isAdmin ? '/app-tecnicos/admin/' : '/app-tecnicos/tecnico/';
             header('Location: ' . $destino);
             exit;
         }

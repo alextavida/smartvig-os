@@ -23,7 +23,7 @@ $email = trim((string) $dados['email']);
 $senha = (string) $dados['senha'];
 
 $pdo = obterConexao();
-$stmt = $pdo->prepare('SELECT id, nome, email, senha_hash, perfil, ativo FROM usuarios WHERE email = :email LIMIT 1');
+$stmt = $pdo->prepare('SELECT id, nome, email, senha_hash, perfil, ativo, foto_perfil FROM usuarios WHERE email = :email LIMIT 1');
 $stmt->execute(['email' => $email]);
 $usuario = $stmt->fetch();
 
@@ -44,5 +44,6 @@ responderSucesso([
         'nome' => $usuario['nome'],
         'email' => $usuario['email'],
         'perfil' => $usuario['perfil'],
+        'foto_perfil' => $usuario['foto_perfil'] ?? null,
     ],
 ]);

@@ -32,16 +32,16 @@ if ($isReset) {
         responderErro('A nova senha deve ter ao menos 6 caracteres.', 422);
     }
 
-    $stmtVerifica = $pdo->prepare("SELECT id FROM usuarios WHERE id = :id AND perfil = 'tecnico'");
+    $stmtVerifica = $pdo->prepare('SELECT id FROM usuarios WHERE id = :id');
     $stmtVerifica->execute(['id' => $tecnicoId]);
     if (!$stmtVerifica->fetch()) {
-        responderErro('Tecnico nao encontrado.', 404);
+        responderErro('Usuario nao encontrado.', 404);
     }
 
     $hash = password_hash($dados['nova_senha'], PASSWORD_BCRYPT);
     $pdo->prepare('UPDATE usuarios SET senha_hash = :h WHERE id = :id')->execute(['h' => $hash, 'id' => $tecnicoId]);
 
-    responderSucesso(['mensagem' => 'Senha do tecnico redefinida com sucesso.', 'tecnico_id' => $tecnicoId]);
+    responderSucesso(['mensagem' => 'Senha redefinida com sucesso.', 'usuario_id' => $tecnicoId]);
 } else {
     // Usuario alterando a propria senha
     exigirCampos($dados, ['senha_atual', 'nova_senha']);
