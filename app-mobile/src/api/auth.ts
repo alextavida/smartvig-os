@@ -7,8 +7,9 @@ interface LoginResposta {
     id: number;
     nome: string;
     email: string;
-    perfil: 'gestor' | 'tecnico';
+    perfil: 'gestor' | 'supervisor' | 'tecnico';
     foto_perfil?: string;
+    roles?: string[];
   };
 }
 
@@ -28,6 +29,7 @@ export async function login(
     perfil: dados.usuario.perfil,
     foto_perfil: dados.usuario.foto_perfil,
     jwt: dados.token,
+    roles: dados.usuario.roles ?? [],
   };
 }
 

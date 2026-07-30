@@ -175,11 +175,11 @@ function toggleReferencia() {
 async function buscarProdutoGC() {
   const q = document.getElementById('buscaProduto').value.trim();
   if (q.length < 2) return;
-  const r = await fetch('/app-tecnicos/api/produtos/buscar-gc.php?q='+encodeURIComponent(q), {
+  const r = await fetch('/app-tecnicos/api/produtos/buscar-gc.php?busca='+encodeURIComponent(q), {
     headers: {'Authorization': 'Bearer ' + (window.APP_JWT||'')}
   });
   const d = await r.json();
-  const itens = d.sucesso ? (d.dados || []) : [];
+  const itens = d.sucesso ? (d.dados?.produtos || []) : [];
   const div = document.getElementById('resultadosBusca');
   if (!itens.length) { div.innerHTML = '<span style="font-size:12px;color:#6b7789;">Nenhum produto encontrado. Adicione manualmente.</span>'; return; }
   div.innerHTML = itens.slice(0,8).map(p =>

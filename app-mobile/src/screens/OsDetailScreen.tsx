@@ -12,6 +12,7 @@ import {
   Image,
   ActivityIndicator,
   Platform,
+  PermissionsAndroid,
 } from 'react-native';
 import {NativeStackScreenProps} from '@react-navigation/native-stack';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -266,19 +267,46 @@ export function OsDetailScreen({route, navigation}: Props) {
   }
 
   async function enviarMidia(fonte: 'camera' | 'galeria', comAnotacao = false) {
-    const fn = fonte === 'camera' ? launchCamera : launchImageLibrary;
+    // Android: pedir permissão de câmera em tempo de execução (obrigatório a partir do Android 6)
+    if (fonte === 'camera' && Platform.OS === 'android') {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.CAMERA,
+        {
+          title: 'Permissão de Câmera',
+          message: 'O SmartVig precisa acessar a câmera para enviar fotos.',
+          buttonPositive: 'Permitir',
+          buttonNegative: 'Cancelar',
+        },
+      );
+      if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+        Alert.alert('Permissão negada', 'Acesso à câmera foi negado. Ative nas configurações do dispositivo.');
+        return;
+      }
+    }
+
     // launchCamera só aceita 'photo' ou 'video' — 'mixed' causa falha silenciosa no Android
     const opcoes = fonte === 'camera'
-      ? {mediaType: 'photo' as const, quality: 0.8 as const, includeBase64: comAnotacao}
+      ? {mediaType: 'photo' as const, quality: 0.8 as const, includeBase64: comAnotacao, saveToPhotos: false}
       : {mediaType: 'mixed' as const, quality: 0.8 as const, includeBase64: false as const};
-    fn(opcoes, async response => {
+
+    try {
+      const response = await (fonte === 'camera' ? launchCamera : launchImageLibrary)(opcoes);
       if (response.didCancel || !response.assets?.[0]) {return;}
+      if (response.errorCode) {
+        mostrarErro(`Erro câmera: ${response.errorMessage ?? response.errorCode}`);
+        return;
+      }
       const asset = response.assets[0];
       const tipo = asset.type?.startsWith('video') ? 'video' : 'foto';
 
       // Foto com anotações: abre o editor antes de enviar
-      if (comAnotacao && tipo === 'foto' && asset.base64) {
-        setFotoBase64Para(`data:image/jpeg;base64,${asset.base64}`);
+      if (comAnotacao && tipo === 'foto') {
+        const b64 = asset.base64 ?? '';
+        if (!b64) {
+          mostrarErro('Não foi possível obter a imagem em base64. Tente novamente.');
+          return;
+        }
+        setFotoBase64Para(`data:image/jpeg;base64,${b64}`);
         setModalAnotacao(true);
         return;
       }
@@ -297,7 +325,9 @@ export function OsDetailScreen({route, navigation}: Props) {
       } finally {
         setSalvando(false);
       }
-    });
+    } catch (e: any) {
+      mostrarErro(e.message ?? 'Erro ao abrir câmera/galeria.');
+    }
   }
 
   function escolherMidia() {
