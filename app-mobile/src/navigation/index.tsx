@@ -1,5 +1,5 @@
 import React from 'react';
-import {NavigationContainer} from '@react-navigation/native';
+import {NavigationContainer, createNavigationContainerRef} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import {Text, View} from 'react-native';
@@ -39,6 +39,8 @@ export type AppTabParamList = {
   Compras: undefined;
   Profile: undefined;
 };
+
+export const navigationRef = createNavigationContainerRef<RootStackParamList>();
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 const AppTab   = createBottomTabNavigator<AppTabParamList>();
@@ -199,7 +201,7 @@ export function Navigation() {
   if (carregando) {return null;}
 
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       <RootStack.Navigator screenOptions={{headerShown: false}}>
         {usuario ? (
           <>

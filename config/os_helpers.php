@@ -7,6 +7,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/database.php';
+require_once __DIR__ . '/push.php';
 
 function registrarHistorico(PDO $pdo, int $osId, ?int $usuarioId, string $acao, ?string $detalhe = null): void
 {
@@ -36,26 +37,61 @@ function criarNotificacao(PDO $pdo, int $usuarioId, ?int $osId, string $tipo, st
 }
 
 /**
- * Envia notificacao para todos os gestores ativos.
+ * Envia notificacao para todos os gestores ativos (in-app + push FCM).
  */
 function notificarGestores(PDO $pdo, ?int $osId, string $tipo, string $titulo, string $mensagem): void
 {
     $stmt = $pdo->query("SELECT id FROM usuarios WHERE perfil = 'gestor' AND ativo = 1");
+    $ids = [];
     foreach ($stmt->fetchAll() as $gestor) {
-        criarNotificacao($pdo, (int) $gestor['id'], $osId, $tipo, $titulo, $mensagem);
+        $id = (int) $gestor['id'];
+        criarNotificacao($pdo, $id, $osId, $tipo, $titulo, $mensagem);
+        $ids[] = $id;
     }
+    $dadosPush = ['tipo' => 'os'];
+    if ($osId) {
+        $dadosPush['os_id'] = (string) $osId;
+    }
+    enviarPushParaUsuarios($pdo, $ids, $titulo, $mensagem, $dadosPush);
 }
 
 /**
- * Envia notificacao para todos os tecnicos atribuidos a uma OS.
+ * Envia notificacao para todos os tecnicos atribuidos a uma OS (in-app + push FCM).
  */
 function notificarTecnicosDaOs(PDO $pdo, int $osId, string $tipo, string $titulo, string $mensagem): void
 {
     $stmt = $pdo->prepare('SELECT tecnico_id FROM os_tecnicos WHERE os_id = :os_id');
     $stmt->execute(['os_id' => $osId]);
+    $ids = [];
     foreach ($stmt->fetchAll() as $linha) {
-        criarNotificacao($pdo, (int) $linha['tecnico_id'], $osId, $tipo, $titulo, $mensagem);
+        $id = (int) $linha['tecnico_id'];
+        criarNotificacao($pdo, $id, $osId, $tipo, $titulo, $mensagem);
+        $ids[] = $id;
     }
+    enviarPushParaUsuarios($pdo, $ids, $titulo, $mensagem, [
+        'tipo'  => 'os',
+        'os_id' => (string) $osId,
+    ]);
+}
+
+/**
+ * Envia notificacao para gestores E supervisores (in-app + push FCM).
+ * Usada quando o técnico muda status e é importante notificar ambos.
+ */
+function notificarGestoresESupervisores(PDO $pdo, ?int $osId, string $tipo, string $titulo, string $mensagem): void
+{
+    $stmt = $pdo->query("SELECT id FROM usuarios WHERE perfil IN ('gestor','supervisor') AND ativo = 1");
+    $ids = [];
+    foreach ($stmt->fetchAll() as $u) {
+        $id = (int) $u['id'];
+        criarNotificacao($pdo, $id, $osId, $tipo, $titulo, $mensagem);
+        $ids[] = $id;
+    }
+    $dadosPush = ['tipo' => 'os'];
+    if ($osId) {
+        $dadosPush['os_id'] = (string) $osId;
+    }
+    enviarPushParaUsuarios($pdo, $ids, $titulo, $mensagem, $dadosPush);
 }
 
 /**

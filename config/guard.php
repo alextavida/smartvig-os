@@ -57,6 +57,16 @@ function exigirLoginWeb(array $perfisPermitidos = []): array
         }
     }
 
+    // Regenera JWT se ausente (sessão criada antes desta chave existir)
+    if (empty($_SESSION['usuario_jwt'])) {
+        $_SESSION['usuario_jwt'] = gerarJwt(
+            (int) $_SESSION['usuario_id'],
+            $perfil,
+            $_SESSION['usuario_nome'],
+            $_SESSION['usuario_email']
+        );
+    }
+
     // Carrega foto_perfil se nao estiver na sessao
     if (!array_key_exists('usuario_foto_perfil', $_SESSION)) {
         $pdo  = obterConexao();

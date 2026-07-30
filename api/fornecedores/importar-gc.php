@@ -39,11 +39,13 @@ if ($cnpj) {
     }
 }
 
+$gcId = isset($dados['gc_id']) ? (int) $dados['gc_id'] : null;
 $stmt = $pdo->prepare(
-    'INSERT INTO fornecedores (nome, cnpj, email, telefone, contato)
-     VALUES (:nome, :cnpj, :email, :telefone, :contato)'
+    'INSERT INTO fornecedores (gc_id, nome, cnpj, email, telefone, contato)
+     VALUES (:gc_id, :nome, :cnpj, :email, :telefone, :contato)'
 );
 $stmt->execute([
+    'gc_id'    => $gcId ?: null,
     'nome'     => $nome,
     'cnpj'     => $cnpj,
     'email'    => !empty($dados['email'])    ? trim((string) $dados['email'])    : null,

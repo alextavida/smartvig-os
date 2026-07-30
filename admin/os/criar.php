@@ -14,7 +14,7 @@ require_once __DIR__ . '/../../includes/icons.php';
 require_once __DIR__ . '/../../config/database.php';
 
 $pdo = obterConexao();
-$tecnicos = $pdo->query("SELECT id, nome, email FROM usuarios WHERE perfil = 'tecnico' AND ativo = 1 ORDER BY nome")->fetchAll();
+$tecnicos = $pdo->query("SELECT id, nome, email, foto_perfil FROM usuarios WHERE perfil = 'tecnico' AND ativo = 1 ORDER BY nome")->fetchAll();
 ?>
 
 <div class="card">
@@ -86,9 +86,25 @@ $tecnicos = $pdo->query("SELECT id, nome, email FROM usuarios WHERE perfil = 'te
       <?php foreach ($tecnicos as $t): ?>
         <div class="tecnico-check">
           <input type="checkbox" class="chk-tecnico" value="<?= (int) $t['id'] ?>" id="tec_<?= (int) $t['id'] ?>">
-          <label for="tec_<?= (int) $t['id'] ?>" style="margin:0; font-weight:500; flex:1;">
-            <?= htmlspecialchars($t['nome']) ?>
-            <small style="color:var(--cinza-500); font-weight:400;"><?= htmlspecialchars($t['email']) ?></small>
+          <label for="tec_<?= (int) $t['id'] ?>" style="margin:0; font-weight:500; flex:1; display:flex; align-items:center; gap:8px;">
+            <?php if (!empty($t['foto_perfil']) && file_exists(__DIR__ . '/../../' . $t['foto_perfil'])): ?>
+              <img src="/app-tecnicos/<?= htmlspecialchars($t['foto_perfil']) ?>" class="avatar-foto" style="width:28px;height:28px;" alt="">
+            <?php else: ?>
+              <div class="avatar-placeholder" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">
+                <?php
+                  $ini = '';
+                  foreach (explode(' ', trim($t['nome'])) as $p) {
+                      if ($p !== '') $ini .= mb_strtoupper(mb_substr($p, 0, 1));
+                      if (mb_strlen($ini) >= 2) break;
+                  }
+                  echo htmlspecialchars($ini);
+                ?>
+              </div>
+            <?php endif; ?>
+            <div>
+              <?= htmlspecialchars($t['nome']) ?>
+              <small style="display:block;color:var(--cinza-500); font-weight:400;"><?= htmlspecialchars($t['email']) ?></small>
+            </div>
           </label>
           <label style="margin:0; display:flex; align-items:center; gap:6px; font-weight:400;">
             <input type="radio" name="responsavel" class="rd-responsavel" value="<?= (int) $t['id'] ?>">
@@ -131,8 +147,10 @@ $tecnicos = $pdo->query("SELECT id, nome, email FROM usuarios WHERE perfil = 'te
 <script>
 // ---------- Autocomplete de clientes ----------
 let acTimer;
+let _acClientes = []; // data store — evita JSON.stringify em onclick (quebra com aspas)
+
 const inputNome = document.getElementById('cliente_nome');
-const acLista = document.getElementById('acLista');
+const acLista   = document.getElementById('acLista');
 const inputGcId = document.getElementById('gc_cliente_id');
 
 inputNome.addEventListener('input', () => {
@@ -144,42 +162,63 @@ inputNome.addEventListener('input', () => {
 
 inputNome.addEventListener('blur', () => setTimeout(fecharAc, 200));
 
+// Delegação de cliques na lista do autocomplete
+acLista.addEventListener('mousedown', (e) => {
+  const item = e.target.closest('[data-ac-idx]');
+  if (item) {
+    e.preventDefault();
+    selecionarCliente(_acClientes[parseInt(item.dataset.acIdx, 10)]);
+    return;
+  }
+  const criar = e.target.closest('[data-ac-criar]');
+  if (criar) {
+    e.preventDefault();
+    abrirModalNovoCliente(criar.dataset.acCriar);
+  }
+});
+
 async function buscarClientes(busca) {
   acLista.innerHTML = '<div class="ac-vazio"><?= ic('carregando', 14) ?> Buscando...</div>';
   acLista.classList.add('aberto');
   try {
     const dados = await apiGet('/clientes/buscar.php?busca=' + encodeURIComponent(busca));
-    renderAc(dados.clientes, busca);
+    renderAc(dados.clientes ?? [], busca);
   } catch (e) {
     acLista.innerHTML = '<div class="ac-vazio">Erro ao buscar clientes.</div>';
   }
 }
 
 function renderAc(clientes, busca) {
-  if (!clientes || !clientes.length) {
+  _acClientes = clientes;
+  if (!clientes.length) {
     acLista.innerHTML =
       '<div class="ac-vazio">Nenhum cliente encontrado.</div>' +
-      '<div class="ac-criar" onclick="abrirModalNovoCliente(\'' + escHtml(busca) + '\')">' +
+      '<div class="ac-criar" data-ac-criar="' + escAttr(busca) + '">' +
       '<?= ic('os_nova', 14) ?> Criar novo cliente no GestaoClick</div>';
     acLista.classList.add('aberto');
     return;
   }
-  let html = clientes.map(c =>
-    '<div class="ac-item" onclick="selecionarCliente(' + JSON.stringify(c) + ')">' +
+  let html = clientes.map((c, i) =>
+    '<div class="ac-item" data-ac-idx="' + i + '">' +
     '<div class="ac-nome">' + escHtml(c.nome) + '</div>' +
-    '<div class="ac-detalhe">' + (c.endereco ? escHtml(c.endereco.trim().replace(/^,\s*/, '').replace(/,\s*$/, '')) + ' &nbsp;' : '') + (c.telefone ? escHtml(c.telefone) : '') + '</div>' +
+    '<div class="ac-detalhe">' + (c.endereco ? escHtml(limparEndereco(c.endereco)) + '&nbsp;' : '') + (c.telefone ? escHtml(c.telefone) : '') + '</div>' +
     '</div>'
   ).join('');
-  html += '<div class="ac-criar" onclick="abrirModalNovoCliente(\'' + escHtml(busca) + '\')"><?= ic('os_nova', 14) ?> Criar novo cliente</div>';
+  html += '<div class="ac-criar" data-ac-criar="' + escAttr(busca) + '"><?= ic('os_nova', 14) ?> Criar novo cliente</div>';
   acLista.innerHTML = html;
   acLista.classList.add('aberto');
 }
 
+function limparEndereco(s) {
+  return (s || '').trim().replace(/^,\s*/, '').replace(/,\s*$/, '');
+}
+
 function selecionarCliente(c) {
-  inputNome.value = c.nome;
-  inputGcId.value = c.id || '';
+  if (!c) return;
+  inputNome.value = c.nome || '';
+  inputGcId.value = c.id  || '';
   document.getElementById('cliente_telefone').value = c.telefone || '';
-  document.getElementById('cliente_endereco').value = (c.endereco || '').trim().replace(/^,\s*/, '').replace(/,\s*$/, '');
+  document.getElementById('cliente_endereco').value = limparEndereco(c.endereco);
   fecharAc();
 }
 
@@ -192,9 +231,13 @@ function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
+function escAttr(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
 // ---------- Modal novo cliente ----------
 function abrirModalNovoCliente(nomeBusca) {
-  document.getElementById('ncNome').value = nomeBusca || '';
+  document.getElementById('ncNome').value = (nomeBusca || '').replace(/&#39;/g,"'");
   document.getElementById('alertaModalCliente').innerHTML = '';
   document.getElementById('modalNovoCliente').classList.add('aberto');
   fecharAc();

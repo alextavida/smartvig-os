@@ -17,6 +17,7 @@ require_once __DIR__ . '/../../config/response.php';
 require_once __DIR__ . '/../../config/auth.php';
 require_once __DIR__ . '/../../config/gestaoclick.php';
 require_once __DIR__ . '/../../config/os_helpers.php';
+require_once __DIR__ . '/../../config/push.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     responderErro('Metodo nao permitido. Use POST.', 405);
@@ -101,16 +102,18 @@ try {
 
     registrarHistorico($pdo, $osId, (int) $payload['usuario_id'], 'os_criada', 'OS criada pelo gestor ' . $payload['nome']);
 
+    $idsTecnicos = [];
+    $msgOs = 'Cliente: ' . $dados['cliente_nome'] . ' — ' . $dados['data_agendamento'];
     foreach ($tecnicos as $t) {
-        criarNotificacao(
-            $pdo,
-            (int) $t['tecnico_id'],
-            $osId,
-            'nova_os',
-            'Nova OS atribuida a voce',
-            'Cliente: ' . $dados['cliente_nome'] . ' - Agendada para ' . $dados['data_agendamento']
-        );
+        $tid = (int) $t['tecnico_id'];
+        criarNotificacao($pdo, $tid, $osId, 'nova_os', 'Nova OS atribuída a você', $msgOs);
+        $idsTecnicos[] = $tid;
     }
+    // Push FCM para os técnicos (fire-and-forget, silencioso)
+    enviarPushParaUsuarios($pdo, $idsTecnicos, 'Nova OS atribuída a você', $msgOs, [
+        'tipo'  => 'os',
+        'os_id' => (string) $osId,
+    ]);
 
     // Tenta sincronizar a criacao com o GestaoClick. Falha aqui NAO desfaz a criacao local.
     $gcOsId = 0;

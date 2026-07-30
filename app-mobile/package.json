@@ -24,7 +24,8 @@
     "react-native-vector-icons": "^10.1.0",
     "@react-native-community/netinfo": "^11.3.1",
     "react-native-webview": "^13.8.6",
-    "@react-native-voice/voice": "^3.2.4"
+    "@react-native-voice/voice": "^3.2.4",
+    "@notifee/react-native": "^7.8.0"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",

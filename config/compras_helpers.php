@@ -5,6 +5,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/push.php';
+
 function gerarNumeroSolicitacao(PDO $pdo): string
 {
     $ano  = date('Y');
@@ -137,7 +139,6 @@ function formatarMoeda(float|null $valor): string
 
 function notificarCompradores(PDO $pdo, int $solicitacaoId, string $tipo, string $titulo, string $mensagem): void
 {
-    // Notifica usuários com role 'comprador' ou perfil 'gestor'
     $stmt = $pdo->query(
         "SELECT DISTINCT u.id
          FROM usuarios u
@@ -147,17 +148,19 @@ function notificarCompradores(PDO $pdo, int $solicitacaoId, string $tipo, string
                OR EXISTS (SELECT 1 FROM usuario_roles ur WHERE ur.usuario_id = u.id AND ur.role = 'comprador')
            )"
     );
+    $ids = [];
     foreach ($stmt->fetchAll() as $row) {
+        $id = (int) $row['id'];
         $pdo->prepare(
             'INSERT INTO notificacoes (usuario_id, os_id, tipo, titulo, mensagem)
              VALUES (:uid, NULL, :tipo, :titulo, :msg)'
-        )->execute([
-            'uid'    => (int) $row['id'],
-            'tipo'   => $tipo,
-            'titulo' => $titulo,
-            'msg'    => $mensagem,
-        ]);
+        )->execute(['uid' => $id, 'tipo' => $tipo, 'titulo' => $titulo, 'msg' => $mensagem]);
+        $ids[] = $id;
     }
+    enviarPushParaUsuarios($pdo, $ids, $titulo, $mensagem, [
+        'tipo'          => 'compra',
+        'solicitacao_id' => (string) $solicitacaoId,
+    ]);
 }
 
 function notificarAprovadores(PDO $pdo, int $solicitacaoId, string $tipo, string $titulo, string $mensagem): void
@@ -171,15 +174,17 @@ function notificarAprovadores(PDO $pdo, int $solicitacaoId, string $tipo, string
                OR EXISTS (SELECT 1 FROM usuario_roles ur WHERE ur.usuario_id = u.id AND ur.role = 'aprovador')
            )"
     );
+    $ids = [];
     foreach ($stmt->fetchAll() as $row) {
+        $id = (int) $row['id'];
         $pdo->prepare(
             'INSERT INTO notificacoes (usuario_id, os_id, tipo, titulo, mensagem)
              VALUES (:uid, NULL, :tipo, :titulo, :msg)'
-        )->execute([
-            'uid'    => (int) $row['id'],
-            'tipo'   => $tipo,
-            'titulo' => $titulo,
-            'msg'    => $mensagem,
-        ]);
+        )->execute(['uid' => $id, 'tipo' => $tipo, 'titulo' => $titulo, 'msg' => $mensagem]);
+        $ids[] = $id;
     }
+    enviarPushParaUsuarios($pdo, $ids, $titulo, $mensagem, [
+        'tipo'          => 'compra',
+        'solicitacao_id' => (string) $solicitacaoId,
+    ]);
 }

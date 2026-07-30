@@ -3,11 +3,11 @@ import {DeviceEventEmitter} from 'react-native';
 import {obterUsuario, obterJwt, limparSessao, salvarSessao} from '../storage';
 import {Usuario} from '../types';
 import {AuthContext} from './useAuth';
+import {inicializarNotificacoes} from '../services/pushNotifications';
 
 function jwtExpirou(jwt: string): boolean {
   try {
     const parte = jwt.split('.')[1];
-    // base64url → base64 padrão
     const base64 = parte.replace(/-/g, '+').replace(/_/g, '/');
     const pad = (4 - (base64.length % 4)) % 4;
     const payload = JSON.parse(atob(base64 + '='.repeat(pad)));
@@ -21,7 +21,12 @@ export function AuthProvider({children}: {children: ReactNode}) {
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [carregando, setCarregando] = useState(true);
 
-  // Carrega sessao salva; descarta se JWT ja expirou
+  // Cria o canal de notificações Android uma vez na montagem
+  useEffect(() => {
+    inicializarNotificacoes();
+  }, []);
+
+  // Carrega sessão salva; descarta se JWT já expirou
   useEffect(() => {
     (async () => {
       const u = await obterUsuario();
@@ -55,7 +60,7 @@ export function AuthProvider({children}: {children: ReactNode}) {
   }
 
   async function atualizarUsuario(parcial: Partial<Usuario>) {
-    if (!usuario) {return;}
+    if (!usuario) { return; }
     const atualizado = {...usuario, ...parcial};
     await salvarSessao(atualizado);
     setUsuario(atualizado);

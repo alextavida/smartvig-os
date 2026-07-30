@@ -8,8 +8,12 @@ if (typeof URLSearchParams !== 'undefined' && !URLSearchParams.prototype.set) {
   };
 }
 
+import notifee from '@notifee/react-native';
 import {AppRegistry} from 'react-native';
 import App from './App';
 import {name as appName} from './app.json';
+
+// Obrigatório pelo @notifee — handler de eventos quando o app está em background
+notifee.onBackgroundEvent(async () => {});
 
 AppRegistry.registerComponent(appName, () => App);
