@@ -182,12 +182,17 @@ async function buscarProdutoGC() {
   const itens = d.sucesso ? (d.dados?.produtos || []) : [];
   const div = document.getElementById('resultadosBusca');
   if (!itens.length) { div.innerHTML = '<span style="font-size:12px;color:#6b7789;">Nenhum produto encontrado. Adicione manualmente.</span>'; return; }
-  div.innerHTML = itens.slice(0,8).map(p =>
-    `<div onclick="adicionarItem({nome:'${p.nome.replace(/'/g,"\\'")}',valor:${p.valor_venda||0},un:'UN',gcid:${p.id||0}})" style="cursor:pointer;padding:6px 8px;border-radius:6px;font-size:13px;border-bottom:1px solid #eef1f5;hover:background:#f4f9fe;">
-      <strong>${p.nome}</strong>
-      ${p.valor_venda ? ' · R$ '+parseFloat(p.valor_venda).toLocaleString('pt-BR',{minimumFractionDigits:2}) : ''}
-    </div>`
-  ).join('');
+  div.innerHTML = itens.slice(0,8).map(p => {
+    const nomeEsc = p.nome.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    const custo = p.valor_custo || 0;
+    const custoFmt = custo ? ' · <span style="color:#1e8e5a;font-weight:700;">R$ '+parseFloat(custo).toLocaleString('pt-BR',{minimumFractionDigits:2})+'</span> <span style="font-size:10px;color:#94a3b8;">(custo)</span>' : '';
+    const un = p.unidade || 'UN';
+    const cod = p.codigo ? `<span style="font-size:11px;color:#94a3b8;margin-left:6px;">${p.codigo}</span>` : '';
+    return `<div onclick="adicionarItem({nome:'${nomeEsc}',valor:${custo},un:'${un}',gcid:${p.id||0},codigo:'${p.codigo||''}'})" style="cursor:pointer;padding:8px 10px;border-radius:6px;font-size:13px;border-bottom:1px solid #eef1f5;display:flex;align-items:center;justify-content:space-between;gap:8px;" onmouseover="this.style.background='#f0f7ff'" onmouseout="this.style.background=''">
+      <span><strong>${p.nome}</strong>${cod}</span>
+      <span style="white-space:nowrap;">${custoFmt}</span>
+    </div>`;
+  }).join('');
 }
 
 // Coleta dados e salva

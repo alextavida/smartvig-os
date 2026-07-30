@@ -183,4 +183,13 @@ class GestaoClickAPI
     {
         return $this->get('tipos_pagamento/');
     }
+
+    public function listarFornecedores(int $pagina = 1, string $busca = ''): array
+    {
+        $parametros = ['pagina' => $pagina];
+        if ($busca !== '') {
+            $parametros['nome'] = $busca;
+        }
+        return $this->get('fornecedores/', $parametros);
+    }
 }

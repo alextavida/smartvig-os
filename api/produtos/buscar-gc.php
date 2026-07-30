@@ -31,11 +31,15 @@ try {
 
     $lista = [];
     foreach ((is_array($itens) ? $itens : []) as $p) {
+        // Usa preço de CUSTO para solicitações internas de compra.
+        // GC retorna valor_custo; valor_venda é o preço de varejo.
+        $valorCusto = (float) ($p['valor_custo'] ?? $p['preco_custo'] ?? $p['custo'] ?? 0);
         $lista[] = [
             'id'          => $p['id']          ?? null,
             'nome'        => $p['nome']         ?? $p['descricao'] ?? '',
-            'valor_venda' => (float) ($p['valor_venda'] ?? $p['preco'] ?? $p['valor'] ?? 0),
-            'codigo'      => $p['codigo']       ?? '',
+            'valor_custo' => $valorCusto,
+            'codigo'      => $p['codigo']       ?? $p['referencia'] ?? '',
+            'unidade'     => $p['unidade']      ?? $p['unidade_medida'] ?? 'UN',
         ];
     }
 
