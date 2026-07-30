@@ -1,5 +1,6 @@
 -- Migration 011: Sistema de Solicitação de Compras + Múltiplos perfis por usuário
--- Executar no phpMyAdmin ou via mysql CLI antes de usar o módulo de compras.
+-- CORREÇÃO: usuarios.id é INT (signed), portanto todas as FKs para usuarios(id)
+-- usam INT, não INT UNSIGNED.
 
 SET FOREIGN_KEY_CHECKS = 0;
 
@@ -11,7 +12,7 @@ SET FOREIGN_KEY_CHECKS = 0;
 
 CREATE TABLE IF NOT EXISTS usuario_roles (
     id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    usuario_id   INT UNSIGNED NOT NULL,
+    usuario_id   INT          NOT NULL,
     role         VARCHAR(50)  NOT NULL,
     criado_em    TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
@@ -85,6 +86,8 @@ INSERT IGNORE INTO centros_custo (id, nome, codigo) VALUES
 
 -- ================================================================
 -- SOLICITAÇÕES DE COMPRA
+-- usuarios.id é INT (signed) → solicitante_id, aprovador_id,
+-- comprador_id e recebido_por_id também devem ser INT.
 -- ================================================================
 
 CREATE TABLE IF NOT EXISTS solicitacoes_compra (
@@ -92,7 +95,7 @@ CREATE TABLE IF NOT EXISTS solicitacoes_compra (
     numero                  VARCHAR(20)    NOT NULL,
 
     -- Solicitante
-    solicitante_id          INT UNSIGNED   NOT NULL,
+    solicitante_id          INT            NOT NULL,
     prioridade              ENUM('baixa','media','alta','urgente') NOT NULL DEFAULT 'media',
     destino                 ENUM('cliente','condominio','obra','estoque','manutencao','veiculo','outro') NOT NULL DEFAULT 'estoque',
     destino_referencia      VARCHAR(255)   NULL,
@@ -116,12 +119,12 @@ CREATE TABLE IF NOT EXISTS solicitacoes_compra (
     ) NOT NULL DEFAULT 'rascunho',
 
     -- Aprovação
-    aprovador_id            INT UNSIGNED   NULL,
+    aprovador_id            INT            NULL,
     aprovado_em             DATETIME       NULL,
     motivo_reprovacao       TEXT           NULL,
 
     -- Compra
-    comprador_id            INT UNSIGNED   NULL,
+    comprador_id            INT            NULL,
     fornecedor_id           INT UNSIGNED   NULL,
     valor_negociado         DECIMAL(12,2)  NULL,
     valor_frete             DECIMAL(12,2)  NULL DEFAULT 0.00,
@@ -138,7 +141,7 @@ CREATE TABLE IF NOT EXISTS solicitacoes_compra (
     nota_fiscal_arquivo     VARCHAR(500)   NULL,
 
     -- Recebimento
-    recebido_por_id         INT UNSIGNED   NULL,
+    recebido_por_id         INT            NULL,
     recebido_em             DATETIME       NULL,
     observacoes_recebimento TEXT           NULL,
 
@@ -192,7 +195,7 @@ CREATE TABLE IF NOT EXISTS solicitacao_itens (
 CREATE TABLE IF NOT EXISTS solicitacao_anexos (
     id             INT UNSIGNED NOT NULL AUTO_INCREMENT,
     solicitacao_id INT UNSIGNED NOT NULL,
-    usuario_id     INT UNSIGNED NULL,
+    usuario_id     INT          NULL,
     nome_original  VARCHAR(255) NOT NULL,
     caminho        VARCHAR(500) NOT NULL,
     tamanho        INT UNSIGNED NULL,
@@ -210,7 +213,7 @@ CREATE TABLE IF NOT EXISTS solicitacao_anexos (
 CREATE TABLE IF NOT EXISTS solicitacao_historico (
     id             INT UNSIGNED NOT NULL AUTO_INCREMENT,
     solicitacao_id INT UNSIGNED NOT NULL,
-    usuario_id     INT UNSIGNED NULL,
+    usuario_id     INT          NULL,
     usuario_nome   VARCHAR(255) NULL,
     acao           VARCHAR(100) NOT NULL,
     detalhe        TEXT         NULL,
