@@ -69,6 +69,7 @@ a:hover { text-decoration: underline; }
   position: sticky;
   top: 0;
   height: 100vh;
+  overflow: hidden;
 }
 
 .sidebar .marca {
@@ -82,7 +83,20 @@ a:hover { text-decoration: underline; }
 .sidebar .marca .titulo { font-weight: 700; font-size: 15px; line-height: 1.2; }
 .sidebar .marca .subtitulo { font-size: 11px; opacity: .75; }
 
-.sidebar nav { display: flex; flex-direction: column; gap: 2px; margin-top: 8px; }
+.sidebar nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 8px;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,.2) transparent;
+}
+.sidebar nav::-webkit-scrollbar { width: 4px; }
+.sidebar nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,.2); border-radius: 4px; }
+.sidebar nav::-webkit-scrollbar-track { background: transparent; }
 
 .sidebar nav a {
   color: rgba(255,255,255,.85);
