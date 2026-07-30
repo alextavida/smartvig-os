@@ -2,9 +2,22 @@ export interface Usuario {
   usuario_id: number;
   nome: string;
   email: string;
-  perfil: 'gestor' | 'tecnico';
+  perfil: 'gestor' | 'supervisor' | 'tecnico';
   foto_perfil?: string;
   jwt: string;
+  roles?: string[];
+}
+
+export type RoleCompras = 'solicitante' | 'comprador' | 'aprovador';
+
+export function temRoleCompras(usuario: Usuario, ...roles: RoleCompras[]): boolean {
+  if (usuario.perfil === 'gestor' || usuario.perfil === 'supervisor') return true;
+  const all = usuario.roles ?? [];
+  return roles.some(r => all.includes(r));
+}
+
+export function temAcessoCompras(usuario: Usuario): boolean {
+  return temRoleCompras(usuario, 'solicitante', 'comprador', 'aprovador');
 }
 
 export interface OS {
@@ -126,6 +139,58 @@ export interface ProdutoGC {
   id: number;
   nome: string;
   valor_venda: number;
+}
+
+export interface SolicitacaoCompra {
+  id: number;
+  numero: string;
+  solicitante_nome: string;
+  prioridade: 'baixa' | 'media' | 'alta' | 'urgente';
+  destino: string;
+  destino_referencia: string | null;
+  categoria_nome: string | null;
+  justificativa: string;
+  valor_estimado: number | null;
+  valor_negociado: number | null;
+  valor_final: number | null;
+  status: 'rascunho' | 'aguardando_aprovacao' | 'aprovado' | 'reprovado' | 'devolvido' | 'em_compra' | 'recebido' | 'concluido' | 'cancelado';
+  criado_em: string;
+  atualizado_em: string;
+}
+
+export interface SolicitacaoCompraDetalhe extends SolicitacaoCompra {
+  aprovador_nome: string | null;
+  aprovado_em: string | null;
+  motivo_reprovacao: string | null;
+  comprador_nome: string | null;
+  fornecedor_nome: string | null;
+  valor_frete: number | null;
+  prazo_entrega: string | null;
+  numero_pedido: string | null;
+  data_compra: string | null;
+  nota_fiscal_numero: string | null;
+  observacoes: string | null;
+  observacoes_compra: string | null;
+  itens: SolicitacaoItem[];
+  historico: SolicitacaoHistorico[];
+}
+
+export interface SolicitacaoItem {
+  id: number;
+  descricao: string;
+  quantidade: number;
+  unidade: string | null;
+  valor_unitario_estimado: number | null;
+  valor_unitario_final: number | null;
+  quantidade_recebida: number | null;
+}
+
+export interface SolicitacaoHistorico {
+  id: number;
+  usuario_nome: string | null;
+  acao: string;
+  detalhe: string | null;
+  criado_em: string;
 }
 
 export interface GpsTecnico {

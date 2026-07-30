@@ -17,7 +17,8 @@ $usuarioAtualId = (int) ($usuarioAtual['id'] ?? 0);
 $tecnicos = $pdo->query(
     "SELECT u.id, u.nome, u.email, u.telefone, u.ativo, u.foto_perfil, u.perfil,
         (SELECT COUNT(*) FROM os_tecnicos ot INNER JOIN ordens_servico o ON o.id = ot.os_id
-         WHERE ot.tecnico_id = u.id AND o.situacao_local IN ('aberto','em_andamento','pausado','reagendado')) AS os_ativas
+         WHERE ot.tecnico_id = u.id AND o.situacao_local IN ('aberto','em_andamento','pausado','reagendado')) AS os_ativas,
+        (SELECT GROUP_CONCAT(ur.role ORDER BY ur.role SEPARATOR ',') FROM usuario_roles ur WHERE ur.usuario_id = u.id) AS roles_compras
      FROM usuarios u ORDER BY FIELD(u.perfil,'gestor','supervisor','tecnico'), u.nome"
 )->fetchAll();
 
@@ -58,10 +59,11 @@ function inicialTec(string $nome): string {
       <tr>
         <th>Usuário</th>
         <th>E-mail / Telefone</th>
-        <th>Função</th>
+        <th>Perfil</th>
+        <th>Funções Compras</th>
         <th>OS Ativas</th>
         <th>Status</th>
-        <th style="width:180px;">Ações</th>
+        <th style="width:200px;">Ações</th>
       </tr>
     </thead>
     <tbody>
@@ -82,6 +84,21 @@ function inicialTec(string $nome): string {
             <div style="font-size:12px; color:var(--cinza-500);"><?= htmlspecialchars($t['telefone'] ?? '-') ?></div>
           </td>
           <td><span class="badge <?= $perfilBadge[$t['perfil']] ?? 'cancelado' ?>"><?= $perfilLabel[$t['perfil']] ?? $t['perfil'] ?></span></td>
+          <td>
+            <?php
+              $rolesArr = $t['roles_compras'] ? explode(',', $t['roles_compras']) : [];
+              $rolesLabel = ['solicitante'=>'Solicitante','comprador'=>'Comprador','aprovador'=>'Aprovador'];
+              if ($t['perfil'] === 'gestor') {
+                  echo '<span style="font-size:11px;color:#1e8e5a;">Acesso total</span>';
+              } elseif (empty($rolesArr)) {
+                  echo '<span style="font-size:11px;color:#94a3b8;">—</span>';
+              } else {
+                  foreach ($rolesArr as $r) {
+                      echo '<span class="badge em_andamento" style="font-size:10px;padding:2px 8px;margin-right:3px;">' . ($rolesLabel[$r] ?? $r) . '</span>';
+                  }
+              }
+            ?>
+          </td>
           <td><?= (int) $t['os_ativas'] ?></td>
           <td>
             <?php if ($t['ativo']): ?>
@@ -95,6 +112,9 @@ function inicialTec(string $nome): string {
               <button class="btn-icone" title="Editar" onclick="abrirModalEditar(<?= htmlspecialchars(json_encode(['id'=>(int)$t['id'],'nome'=>$t['nome'],'email'=>$t['email'],'telefone'=>$t['telefone']??'','ativo'=>(bool)$t['ativo'],'perfil'=>$t['perfil'],'ehEuMesmo'=>((int)$t['id']===$usuarioAtualId)])) ?>)"><?= ic('editar', 15) ?></button>
               <button class="btn-icone" title="Foto de perfil" onclick="abrirModalFoto(<?= (int) $t['id'] ?>, <?= htmlspecialchars(json_encode($t['nome']), ENT_QUOTES) ?>)"><?= ic('foto', 15) ?></button>
               <button class="btn-icone" title="Redefinir senha" onclick="abrirModalSenha(<?= (int) $t['id'] ?>, <?= htmlspecialchars(json_encode($t['nome']), ENT_QUOTES) ?>)"><?= ic('cadeado', 15) ?></button>
+              <button class="btn-icone" title="Funções de Compras" onclick="abrirModalRoles(<?= (int)$t['id'] ?>, <?= htmlspecialchars(json_encode($t['nome']), ENT_QUOTES) ?>, <?= htmlspecialchars(json_encode($t['roles_compras'] ?? ''), ENT_QUOTES) ?>, '<?= $t['perfil'] ?>')">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+              </button>
             </div>
           </td>
         </tr>
@@ -168,6 +188,35 @@ function inicialTec(string $nome): string {
     <div class="campo"><label>Confirmar nova senha *</label><input type="password" id="confirmarSenha" minlength="6"></div>
     <div style="display:flex; gap:10px; margin-top:6px;">
       <button class="btn btn-primario" onclick="redefinirSenha()"><?= ic('check', 15) ?> Redefinir</button>
+      <button class="btn btn-neutro" onclick="fecharModais()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Funções de Compras -->
+<div class="modal-overlay" id="modalRoles">
+  <div class="modal-box">
+    <button class="modal-fechar" onclick="fecharModais()">✕</button>
+    <h3>Funções de Compras</h3>
+    <div id="alertaRoles"></div>
+    <p id="rolesLabel" style="font-size:13px;color:#6b7789;margin-bottom:14px;"></p>
+    <input type="hidden" id="rolesTecnicoId">
+    <div id="rolesCheckboxes" style="display:flex;flex-direction:column;gap:12px;margin-bottom:18px;">
+      <label style="display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer;">
+        <input type="checkbox" id="roleSolicitante" style="width:16px;height:16px;">
+        <span><strong>Solicitante</strong> — pode criar solicitações de compra</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer;">
+        <input type="checkbox" id="roleComprador" style="width:16px;height:16px;">
+        <span><strong>Comprador</strong> — processa compras aprovadas junto a fornecedores</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer;">
+        <input type="checkbox" id="roleAprovador" style="width:16px;height:16px;">
+        <span><strong>Aprovador</strong> — aprova ou reprova solicitações</span>
+      </label>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:6px;">
+      <button class="btn btn-primario" onclick="salvarRolesTecnico()">Salvar permissões</button>
       <button class="btn btn-neutro" onclick="fecharModais()">Cancelar</button>
     </div>
   </div>
@@ -298,6 +347,36 @@ async function redefinirSenha() {
     });
     alertaBox.innerHTML = '<div class="alerta alerta-sucesso">Senha redefinida com sucesso!</div>';
     setTimeout(fecharModais, 1200);
+  } catch (e) {
+    alertaBox.innerHTML = '<div class="alerta alerta-erro">Erro: ' + e.message + '</div>';
+  }
+}
+
+// ---------- Modal Roles ----------
+function abrirModalRoles(id, nome, rolesStr, perfil) {
+  document.getElementById('rolesTecnicoId').value = id;
+  document.getElementById('rolesLabel').textContent = 'Configurar funções de compras para: ' + nome;
+  document.getElementById('alertaRoles').innerHTML = '';
+  const rolesArr = rolesStr ? rolesStr.split(',') : [];
+  const gestor = perfil === 'gestor';
+  document.getElementById('roleSolicitante').checked = gestor || rolesArr.includes('solicitante');
+  document.getElementById('roleComprador').checked   = gestor || rolesArr.includes('comprador');
+  document.getElementById('roleAprovador').checked   = gestor || perfil === 'supervisor' || rolesArr.includes('aprovador');
+  document.getElementById('rolesCheckboxes').querySelectorAll('input').forEach(cb => { cb.disabled = gestor || (perfil === 'supervisor' && cb.id === 'roleAprovador'); });
+  document.getElementById('modalRoles').classList.add('aberto');
+}
+
+async function salvarRolesTecnico() {
+  const alertaBox = document.getElementById('alertaRoles');
+  const uid = parseInt(document.getElementById('rolesTecnicoId').value, 10);
+  const roles = [];
+  if (document.getElementById('roleSolicitante').checked) roles.push('solicitante');
+  if (document.getElementById('roleComprador').checked)   roles.push('comprador');
+  if (document.getElementById('roleAprovador').checked)   roles.push('aprovador');
+  try {
+    await apiPost('/usuarios/roles.php', { usuario_id: uid, roles });
+    alertaBox.innerHTML = '<div class="alerta alerta-sucesso">Permissões salvas!</div>';
+    setTimeout(() => window.location.reload(), 900);
   } catch (e) {
     alertaBox.innerHTML = '<div class="alerta alerta-erro">Erro: ' + e.message + '</div>';
   }

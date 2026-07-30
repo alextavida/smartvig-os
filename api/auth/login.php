@@ -37,6 +37,10 @@ if ((int) $usuario['ativo'] !== 1) {
 
 $token = gerarJwt((int) $usuario['id'], $usuario['perfil'], $usuario['nome'], $usuario['email']);
 
+$stmtRoles = $pdo->prepare('SELECT role FROM usuario_roles WHERE usuario_id = :id ORDER BY role');
+$stmtRoles->execute(['id' => (int) $usuario['id']]);
+$roles = array_column($stmtRoles->fetchAll(), 'role');
+
 responderSucesso([
     'token' => $token,
     'usuario' => [
@@ -45,5 +49,6 @@ responderSucesso([
         'email' => $usuario['email'],
         'perfil' => $usuario['perfil'],
         'foto_perfil' => $usuario['foto_perfil'] ?? null,
+        'roles' => $roles,
     ],
 ]);

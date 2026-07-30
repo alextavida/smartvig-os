@@ -14,8 +14,11 @@ import {ProdutividadeScreen} from '../screens/ProdutividadeScreen';
 import {MapaTecnicosScreen} from '../screens/MapaTecnicosScreen';
 import {DashboardGestorScreen} from '../screens/DashboardGestorScreen';
 import {ClienteHistoricoScreen} from '../screens/ClienteHistoricoScreen';
+import {ComprasListaScreen} from '../screens/ComprasListaScreen';
+import {CompraDetalheScreen} from '../screens/CompraDetalheScreen';
 import {useOfflineQueue} from '../hooks/useOfflineQueue';
 import {CORES} from '../config';
+import {temAcessoCompras} from '../types';
 
 export type RootStackParamList = {
   Login: undefined;
@@ -24,6 +27,8 @@ export type RootStackParamList = {
   CreateOs: undefined;
   MapaTecnicos: undefined;
   ClienteHistorico: {gcClienteId: number; clienteNome: string};
+  ComprasLista: undefined;
+  CompraDetalhe: {id: number};
 };
 
 export type AppTabParamList = {
@@ -31,6 +36,7 @@ export type AppTabParamList = {
   Produtividade: undefined;
   Dashboard: undefined;
   MapaTecnicos: undefined;
+  Compras: undefined;
   Profile: undefined;
 };
 
@@ -72,7 +78,7 @@ function TabIcon({icone, cor, pendentes}: {icone: string; cor: string; pendentes
   );
 }
 
-function AppTabsTecnico() {
+function AppTabsTecnico({comCompras}: {comCompras: boolean}) {
   const {pendentes} = useOfflineQueue();
   return (
     <AppTab.Navigator screenOptions={tabBarOptions}>
@@ -98,6 +104,20 @@ function AppTabsTecnico() {
           tabBarIcon: ({color}) => <TabIcon icone="bar-chart" cor={color} />,
         }}
       />
+      {comCompras && (
+        <AppTab.Screen
+          name="Compras"
+          component={ComprasListaScreen}
+          options={{
+            headerShown: true,
+            title: 'Solicitações de Compra',
+            headerStyle: {backgroundColor: CORES.branco},
+            headerTitleStyle: {fontWeight: '800', color: CORES.cinza900, fontSize: 16},
+            tabBarLabel: 'Compras',
+            tabBarIcon: ({color}) => <TabIcon icone="shopping-cart" cor={color} />,
+          }}
+        />
+      )}
       <AppTab.Screen
         name="Profile"
         component={ProfileScreen}
@@ -141,6 +161,18 @@ function AppTabsGestor() {
         }}
       />
       <AppTab.Screen
+        name="Compras"
+        component={ComprasListaScreen}
+        options={{
+          headerShown: true,
+          title: 'Solicitações de Compra',
+          headerStyle: {backgroundColor: CORES.branco},
+          headerTitleStyle: {fontWeight: '800', color: CORES.cinza900, fontSize: 16},
+          tabBarLabel: 'Compras',
+          tabBarIcon: ({color}) => <TabIcon icone="shopping-cart" cor={color} />,
+        }}
+      />
+      <AppTab.Screen
         name="Profile"
         component={ProfileScreen}
         options={{
@@ -154,10 +186,11 @@ function AppTabsGestor() {
 
 function AppTabs() {
   const {usuario} = useAuth();
-  if (usuario?.perfil === 'gestor') {
+  if (usuario?.perfil === 'gestor' || usuario?.perfil === 'supervisor') {
     return <AppTabsGestor />;
   }
-  return <AppTabsTecnico />;
+  const comCompras = usuario ? temAcessoCompras(usuario) : false;
+  return <AppTabsTecnico comCompras={comCompras} />;
 }
 
 export function Navigation() {
@@ -206,6 +239,30 @@ export function Navigation() {
               options={{
                 headerShown: true,
                 title: 'Histórico do Cliente',
+                headerBackTitle: 'Voltar',
+                headerTintColor: CORES.azul700,
+                headerStyle: {backgroundColor: CORES.branco},
+                headerTitleStyle: {fontWeight: '800', color: CORES.cinza900, fontSize: 16},
+              }}
+            />
+            <RootStack.Screen
+              name="ComprasLista"
+              component={ComprasListaScreen}
+              options={{
+                headerShown: true,
+                title: 'Solicitações de Compra',
+                headerBackTitle: 'Voltar',
+                headerTintColor: CORES.azul700,
+                headerStyle: {backgroundColor: CORES.branco},
+                headerTitleStyle: {fontWeight: '800', color: CORES.cinza900, fontSize: 16},
+              }}
+            />
+            <RootStack.Screen
+              name="CompraDetalhe"
+              component={CompraDetalheScreen}
+              options={{
+                headerShown: true,
+                title: 'Solicitação',
                 headerBackTitle: 'Voltar',
                 headerTintColor: CORES.azul700,
                 headerStyle: {backgroundColor: CORES.branco},

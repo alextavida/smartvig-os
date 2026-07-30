@@ -37,14 +37,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ((int) $usuario['ativo'] !== 1) {
             $erro = 'Usuario inativo. Contate o gestor.';
         } else {
-            $_SESSION['usuario_id'] = (int) $usuario['id'];
-            $_SESSION['usuario_nome'] = $usuario['nome'];
-            $_SESSION['usuario_email'] = $usuario['email'];
-            $_SESSION['usuario_perfil'] = $usuario['perfil'];
-            $_SESSION['usuario_jwt'] = gerarJwt((int) $usuario['id'], $usuario['perfil'], $usuario['nome'], $usuario['email']);
+            // Carrega roles adicionais do módulo de compras
+            $stmtRoles = $pdo->prepare('SELECT role FROM usuario_roles WHERE usuario_id = :id');
+            $stmtRoles->execute(['id' => (int) $usuario['id']]);
+            $roles = array_column($stmtRoles->fetchAll(), 'role');
 
-            $isAdmin = in_array($usuario['perfil'], ['gestor', 'supervisor'], true);
-            $destino = $isAdmin ? '/app-tecnicos/admin/' : '/app-tecnicos/tecnico/';
+            $_SESSION['usuario_id']     = (int) $usuario['id'];
+            $_SESSION['usuario_nome']   = $usuario['nome'];
+            $_SESSION['usuario_email']  = $usuario['email'];
+            $_SESSION['usuario_perfil'] = $usuario['perfil'];
+            $_SESSION['usuario_roles']  = $roles;
+            $_SESSION['usuario_jwt']    = gerarJwt((int) $usuario['id'], $usuario['perfil'], $usuario['nome'], $usuario['email']);
+
+            $isAdmin        = in_array($usuario['perfil'], ['gestor', 'supervisor'], true);
+            $temRoleCompras = !empty(array_intersect($roles, ['solicitante', 'comprador', 'aprovador']));
+
+            if ($isAdmin) {
+                $destino = '/app-tecnicos/admin/';
+            } elseif ($temRoleCompras) {
+                $destino = '/app-tecnicos/admin/compras/';
+            } else {
+                $destino = '/app-tecnicos/tecnico/';
+            }
             header('Location: ' . $destino);
             exit;
         }

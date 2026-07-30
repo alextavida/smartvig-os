@@ -26,37 +26,74 @@ function exigirLoginWeb(array $perfisPermitidos = []): array
 {
     iniciarSessaoSegura();
 
+    $base = obterCaminhoBaseApp();
+
     if (empty($_SESSION['usuario_id'])) {
-        $caminhoBase = obterCaminhoBaseApp();
-        header('Location: ' . $caminhoBase . '/login.php');
+        header('Location: ' . $base . '/login.php');
         exit;
     }
 
-    if (!empty($perfisPermitidos) && !in_array($_SESSION['usuario_perfil'], $perfisPermitidos, true)) {
-        $caminhoBase = obterCaminhoBaseApp();
-        $isAdmin = in_array($_SESSION['usuario_perfil'], ['gestor', 'supervisor'], true);
-        $destino = $isAdmin ? '/admin/' : '/tecnico/';
-        header('Location: ' . $caminhoBase . $destino);
-        exit;
+    $perfil = $_SESSION['usuario_perfil'] ?? '';
+
+    // Carrega roles adicionais do banco se ainda nao estiverem na sessao
+    if (!array_key_exists('usuario_roles', $_SESSION)) {
+        $pdo   = obterConexao();
+        $stmtR = $pdo->prepare('SELECT role FROM usuario_roles WHERE usuario_id = :id');
+        $stmtR->execute(['id' => (int) $_SESSION['usuario_id']]);
+        $_SESSION['usuario_roles'] = array_column($stmtR->fetchAll(), 'role');
+    }
+    $roles = $_SESSION['usuario_roles'] ?? [];
+
+    // Verifica acesso: gestor tem acesso total; outros checam perfil + roles
+    if (!empty($perfisPermitidos)) {
+        $todosRoles = array_merge([$perfil], $roles);
+        $temAcesso  = ($perfil === 'gestor') || !empty(array_intersect($todosRoles, $perfisPermitidos));
+        if (!$temAcesso) {
+            $temRoleCompras = !empty(array_intersect($roles, ['solicitante', 'comprador', 'aprovador']));
+            $isAdmin        = in_array($perfil, ['gestor', 'supervisor'], true);
+            $destino = ($isAdmin || $temRoleCompras) ? '/admin/compras/' : '/tecnico/';
+            header('Location: ' . $base . $destino);
+            exit;
+        }
     }
 
-    // Atualiza foto_perfil da sessao se ainda nao estiver carregada
-    if (!isset($_SESSION['usuario_foto_perfil'])) {
-        $pdo = obterConexao();
-        $row = $pdo->prepare('SELECT foto_perfil FROM usuarios WHERE id = :id');
-        $row->execute(['id' => (int) $_SESSION['usuario_id']]);
-        $dados = $row->fetch();
+    // Carrega foto_perfil se nao estiver na sessao
+    if (!array_key_exists('usuario_foto_perfil', $_SESSION)) {
+        $pdo  = obterConexao();
+        $stmtF = $pdo->prepare('SELECT foto_perfil FROM usuarios WHERE id = :id');
+        $stmtF->execute(['id' => (int) $_SESSION['usuario_id']]);
+        $dados = $stmtF->fetch();
         $_SESSION['usuario_foto_perfil'] = $dados['foto_perfil'] ?? null;
     }
 
     return [
+        'id'          => (int) $_SESSION['usuario_id'],
         'usuario_id'  => (int) $_SESSION['usuario_id'],
         'nome'        => $_SESSION['usuario_nome'],
         'email'       => $_SESSION['usuario_email'],
-        'perfil'      => $_SESSION['usuario_perfil'],
+        'perfil'      => $perfil,
+        'roles'       => $roles,
         'jwt'         => $_SESSION['usuario_jwt'],
         'foto_perfil' => $_SESSION['usuario_foto_perfil'] ?? null,
     ];
+}
+
+/**
+ * Verifica se o usuário atual (retornado por exigirLoginWeb) tem o papel informado.
+ * Gestor sempre retorna true.
+ */
+function temRole(array $usuario, string ...$roles): bool
+{
+    if (($usuario['perfil'] ?? '') === 'gestor') {
+        return true;
+    }
+    $todosRoles = array_merge([$usuario['perfil'] ?? ''], $usuario['roles'] ?? []);
+    foreach ($roles as $r) {
+        if (in_array($r, $todosRoles, true)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 /**

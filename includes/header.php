@@ -12,6 +12,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../config/guard.php';
 require_once __DIR__ . '/../includes/icons.php';
 
+require_once __DIR__ . '/../config/compras_helpers.php';
 $usuarioAtual = exigirLoginWeb($perfisPermitidosPagina ?? []);
 $tituloPagina = $tituloPagina ?? 'SmartVig';
 $paginaAtiva = $paginaAtiva ?? '';
@@ -45,8 +46,19 @@ $fotoPerfil = $usuarioAtual['foto_perfil'] ?? null;
       </div>
     </div>
     <nav>
-      <?php if (in_array($usuarioAtual['perfil'], ['gestor', 'supervisor'], true)): ?>
-        <?php $isSupervisor = $usuarioAtual['perfil'] === 'supervisor'; ?>
+      <?php
+        $isAdmin        = in_array($usuarioAtual['perfil'], ['gestor', 'supervisor'], true);
+        $isSupervisor   = $usuarioAtual['perfil'] === 'supervisor';
+        $isGestor       = $usuarioAtual['perfil'] === 'gestor';
+        $podeSolicitar  = temRole($usuarioAtual, 'solicitante', 'comprador', 'aprovador');
+        $podeComprar    = temRole($usuarioAtual, 'comprador');
+        $podeAprovar    = temRole($usuarioAtual, 'aprovador', 'supervisor');
+        $temCompras     = $isAdmin || $podeSolicitar;
+      ?>
+
+      <?php if ($isAdmin): ?>
+        <!-- ── OS / Operacional ── -->
+        <div class="nav-grupo">Operacional</div>
         <a href="/app-tecnicos/admin/" class="<?= $paginaAtiva === 'dashboard' ? 'ativo' : '' ?>">
           <?= ic('dashboard') ?> Dashboard
         </a>
@@ -75,7 +87,7 @@ $fotoPerfil = $usuarioAtual['foto_perfil'] ?? null;
         </a>
         <?php if (!$isSupervisor): ?>
         <a href="/app-tecnicos/admin/tecnicos/lista.php" class="<?= $paginaAtiva === 'tecnicos' ? 'ativo' : '' ?>">
-          <?= ic('tecnicos') ?> Tecnicos
+          <?= ic('tecnicos') ?> Usuários
         </a>
         <?php endif; ?>
         <a href="/app-tecnicos/admin/clientes/historico.php" class="<?= $paginaAtiva === 'clientes' ? 'ativo' : '' ?>">
@@ -92,6 +104,14 @@ $fotoPerfil = $usuarioAtual['foto_perfil'] ?? null;
           Diagnostico GC
         </a>
         <?php endif; ?>
+      <?php elseif (!$isAdmin && $podeSolicitar): ?>
+        <!-- Tecnico com role de compras: exibe minhas OS + compras -->
+        <a href="/app-tecnicos/tecnico/" class="<?= $paginaAtiva === 'dashboard' ? 'ativo' : '' ?>">
+          <?= ic('os_lista') ?> Minhas OS
+        </a>
+        <a href="/app-tecnicos/tecnico/perfil.php" class="<?= $paginaAtiva === 'perfil' ? 'ativo' : '' ?>">
+          <?= ic('perfil') ?> Meu Perfil
+        </a>
       <?php else: ?>
         <a href="/app-tecnicos/tecnico/" class="<?= $paginaAtiva === 'dashboard' ? 'ativo' : '' ?>">
           <?= ic('os_lista') ?> Minhas OS
@@ -99,6 +119,33 @@ $fotoPerfil = $usuarioAtual['foto_perfil'] ?? null;
         <a href="/app-tecnicos/tecnico/perfil.php" class="<?= $paginaAtiva === 'perfil' ? 'ativo' : '' ?>">
           <?= ic('perfil') ?> Meu Perfil
         </a>
+      <?php endif; ?>
+
+      <?php if ($temCompras): ?>
+        <!-- ── Compras ── -->
+        <div class="nav-grupo">Compras</div>
+        <a href="/app-tecnicos/admin/compras/" class="<?= $paginaAtiva === 'compras_dash' ? 'ativo' : '' ?>">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+          Dashboard Compras
+        </a>
+        <a href="/app-tecnicos/admin/compras/solicitacoes/lista.php" class="<?= $paginaAtiva === 'compras_lista' ? 'ativo' : '' ?>">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="2" ry="2"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>
+          Solicitações
+        </a>
+        <a href="/app-tecnicos/admin/compras/solicitacoes/nova.php" class="<?= $paginaAtiva === 'compras_nova' ? 'ativo' : '' ?>">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Nova Solicitação
+        </a>
+        <?php if ($isAdmin): ?>
+        <a href="/app-tecnicos/admin/compras/fornecedores/lista.php" class="<?= $paginaAtiva === 'fornecedores' ? 'ativo' : '' ?>">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          Fornecedores
+        </a>
+        <a href="/app-tecnicos/admin/compras/configuracoes/" class="<?= $paginaAtiva === 'compras_config' ? 'ativo' : '' ?>">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          Config. Compras
+        </a>
+        <?php endif; ?>
       <?php endif; ?>
     </nav>
     <div class="rodape-sidebar">
