@@ -193,6 +193,38 @@ export interface SolicitacaoHistorico {
   criado_em: string;
 }
 
+export interface Orcamento {
+  id: number;
+  codigo: string;
+  gc_cliente_id: number | null;
+  gc_orcamento_id: number | null;
+  cliente_nome: string;
+  cliente_email: string | null;
+  cliente_telefone: string | null;
+  observacoes: string | null;
+  validade_dias: number;
+  status: 'rascunho' | 'enviado' | 'aprovado' | 'recusado' | 'convertido';
+  criado_por: number;
+  criado_por_nome: string | null;
+  criado_em: string;
+  os_id_gerada: number | null;
+  total: number;
+  total_itens: number;
+}
+
+export interface OrcamentoItem {
+  id: number;
+  orcamento_id: number;
+  tipo: 'servico' | 'peca';
+  descricao: string;
+  quantidade: number;
+  valor_unitario: number;
+}
+
+export interface OrcamentoDetalhe extends Orcamento {
+  itens: OrcamentoItem[];
+}
+
 export interface GpsTecnico {
   tecnico_id: number;
   tecnico_nome: string;

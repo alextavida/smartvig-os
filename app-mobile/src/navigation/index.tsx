@@ -16,6 +16,10 @@ import {DashboardGestorScreen} from '../screens/DashboardGestorScreen';
 import {ClienteHistoricoScreen} from '../screens/ClienteHistoricoScreen';
 import {ComprasListaScreen} from '../screens/ComprasListaScreen';
 import {CompraDetalheScreen} from '../screens/CompraDetalheScreen';
+import {NovaCompraScreen} from '../screens/NovaCompraScreen';
+import {OrcamentosListaScreen} from '../screens/OrcamentosListaScreen';
+import {OrcamentoDetalheScreen} from '../screens/OrcamentoDetalheScreen';
+import {NovoOrcamentoScreen} from '../screens/NovoOrcamentoScreen';
 import {useOfflineQueue} from '../hooks/useOfflineQueue';
 import {CORES} from '../config';
 import {temAcessoCompras} from '../types';
@@ -29,6 +33,10 @@ export type RootStackParamList = {
   ClienteHistorico: {gcClienteId: number; clienteNome: string};
   ComprasLista: undefined;
   CompraDetalhe: {id: number};
+  NovaCompra: undefined;
+  OrcamentosLista: undefined;
+  OrcamentoDetalhe: {id: number};
+  NovoOrcamento: undefined;
 };
 
 export type AppTabParamList = {
@@ -36,6 +44,7 @@ export type AppTabParamList = {
   Produtividade: undefined;
   Dashboard: undefined;
   MapaTecnicos: undefined;
+  Orcamentos: undefined;
   Compras: undefined;
   Profile: undefined;
 };
@@ -106,6 +115,18 @@ function AppTabsTecnico({comCompras}: {comCompras: boolean}) {
           tabBarIcon: ({color}) => <TabIcon icone="bar-chart" cor={color} />,
         }}
       />
+      <AppTab.Screen
+        name="Orcamentos"
+        component={OrcamentosListaScreen}
+        options={{
+          headerShown: true,
+          title: 'Orçamentos',
+          headerStyle: {backgroundColor: CORES.branco},
+          headerTitleStyle: {fontWeight: '800', color: CORES.cinza900, fontSize: 16},
+          tabBarLabel: 'Orçamentos',
+          tabBarIcon: ({color}) => <TabIcon icone="description" cor={color} />,
+        }}
+      />
       {comCompras && (
         <AppTab.Screen
           name="Compras"
@@ -160,6 +181,18 @@ function AppTabsGestor() {
         options={{
           tabBarLabel: 'Mapa',
           tabBarIcon: ({color}) => <TabIcon icone="location-on" cor={color} />,
+        }}
+      />
+      <AppTab.Screen
+        name="Orcamentos"
+        component={OrcamentosListaScreen}
+        options={{
+          headerShown: true,
+          title: 'Orçamentos',
+          headerStyle: {backgroundColor: CORES.branco},
+          headerTitleStyle: {fontWeight: '800', color: CORES.cinza900, fontSize: 16},
+          tabBarLabel: 'Orçamentos',
+          tabBarIcon: ({color}) => <TabIcon icone="description" cor={color} />,
         }}
       />
       <AppTab.Screen
@@ -265,6 +298,54 @@ export function Navigation() {
               options={{
                 headerShown: true,
                 title: 'Solicitação',
+                headerBackTitle: 'Voltar',
+                headerTintColor: CORES.azul700,
+                headerStyle: {backgroundColor: CORES.branco},
+                headerTitleStyle: {fontWeight: '800', color: CORES.cinza900, fontSize: 16},
+              }}
+            />
+            <RootStack.Screen
+              name="NovaCompra"
+              component={NovaCompraScreen}
+              options={{
+                headerShown: true,
+                title: 'Nova Solicitação',
+                headerBackTitle: 'Voltar',
+                headerTintColor: CORES.azul700,
+                headerStyle: {backgroundColor: CORES.branco},
+                headerTitleStyle: {fontWeight: '800', color: CORES.cinza900, fontSize: 16},
+              }}
+            />
+            <RootStack.Screen
+              name="OrcamentosLista"
+              component={OrcamentosListaScreen}
+              options={{
+                headerShown: true,
+                title: 'Orçamentos',
+                headerBackTitle: 'Voltar',
+                headerTintColor: CORES.azul700,
+                headerStyle: {backgroundColor: CORES.branco},
+                headerTitleStyle: {fontWeight: '800', color: CORES.cinza900, fontSize: 16},
+              }}
+            />
+            <RootStack.Screen
+              name="OrcamentoDetalhe"
+              component={OrcamentoDetalheScreen}
+              options={{
+                headerShown: true,
+                title: 'Orçamento',
+                headerBackTitle: 'Voltar',
+                headerTintColor: CORES.azul700,
+                headerStyle: {backgroundColor: CORES.branco},
+                headerTitleStyle: {fontWeight: '800', color: CORES.cinza900, fontSize: 16},
+              }}
+            />
+            <RootStack.Screen
+              name="NovoOrcamento"
+              component={NovoOrcamentoScreen}
+              options={{
+                headerShown: true,
+                title: 'Novo Orçamento',
                 headerBackTitle: 'Voltar',
                 headerTintColor: CORES.azul700,
                 headerStyle: {backgroundColor: CORES.branco},

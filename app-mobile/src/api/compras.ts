@@ -9,7 +9,32 @@ export interface ListarComprasParams {
 
 interface ListarComprasResposta {
   solicitacoes: SolicitacaoCompra[];
-  paginacao: {pagina: number; total: number; total_paginas: number};
+  total: number;
+  pagina: number;
+  paginas: number;
+}
+
+export interface ItemCompra {
+  produto_nome: string;
+  quantidade: number;
+  valor_estimado?: number;
+  produto_unidade?: string;
+}
+
+export interface NovaCompraPayload {
+  justificativa: string;
+  prioridade?: 'baixa' | 'media' | 'alta' | 'urgente';
+  destino?: string;
+  destino_referencia?: string;
+  observacoes?: string;
+  itens: ItemCompra[];
+  enviar?: boolean;
+}
+
+export async function criarCompra(
+  payload: NovaCompraPayload,
+): Promise<{id: number; numero: string; status: string}> {
+  return apiPost('/compras/criar.php', payload);
 }
 
 export async function listarCompras(params: ListarComprasParams = {}): Promise<ListarComprasResposta> {

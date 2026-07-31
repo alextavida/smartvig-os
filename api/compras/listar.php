@@ -101,9 +101,9 @@ $stmt->execute();
 $itens = $stmt->fetchAll();
 
 responderSucesso([
-    'itens'      => $itens,
-    'total'      => $total,
-    'pagina'     => $pagina,
-    'por_pagina' => $porPagina,
-    'paginas'    => (int) ceil($total / $porPagina),
+    'solicitacoes' => $itens,
+    'total'        => $total,
+    'pagina'       => $pagina,
+    'por_pagina'   => $porPagina,
+    'paginas'      => (int) ceil($total / $porPagina),
 ]);

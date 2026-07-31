@@ -14,6 +14,7 @@ import {SolicitacaoCompra} from '../types';
 import {useAuth} from '../hooks/useAuth';
 import {CORES} from '../config';
 import {RootStackParamList} from '../navigation';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ComprasLista'>;
 
@@ -148,7 +149,7 @@ export function ComprasListaScreen({navigation}: Props) {
         <View style={estilos.erroBox}>
           <Text style={estilos.erroText}>{erro}</Text>
           <TouchableOpacity onPress={() => carregar()} style={estilos.btnRetry}>
-            <Text style={{color: CORES.azul}}>Tentar novamente</Text>
+            <Text style={{color: CORES.azul700}}>Tentar novamente</Text>
           </TouchableOpacity>
         </View>
       ) : lista.length === 0 ? (
@@ -162,10 +163,19 @@ export function ComprasListaScreen({navigation}: Props) {
           renderItem={renderItem}
           contentContainerStyle={{padding: 12}}
           refreshControl={
-            <RefreshControl refreshing={atualizando} onRefresh={() => carregar(true)} colors={[CORES.azul]} />
+            <RefreshControl refreshing={atualizando} onRefresh={() => carregar(true)} colors={[CORES.azul700]} />
           }
         />
       )}
+
+      {/* FAB nova solicitação */}
+      <TouchableOpacity
+        style={estilos.fab}
+        onPress={() => navigation.navigate('NovaCompra')}
+        activeOpacity={0.85}
+      >
+        <Icon name="add" size={26} color="#fff" />
+      </TouchableOpacity>
     </View>
   );
 }
@@ -174,7 +184,7 @@ const estilos = StyleSheet.create({
   container: {flex: 1, backgroundColor: '#f4f8fd'},
   abasContainer: {flexGrow: 0, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eef1f5'},
   aba: {paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, marginRight: 6, backgroundColor: '#f0f4f8'},
-  abaAtiva: {backgroundColor: CORES.azul},
+  abaAtiva: {backgroundColor: CORES.azul700},
   abaText: {fontSize: 12, color: '#6b7789'},
   abaTextAtiva: {color: '#fff', fontWeight: '700'},
   card: {backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 10, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 6, elevation: 2},
@@ -195,4 +205,5 @@ const estilos = StyleSheet.create({
   btnRetry: {padding: 10},
   vazio: {flex: 1, justifyContent: 'center', alignItems: 'center'},
   vazioText: {color: '#94a3b8', fontSize: 14},
+  fab: {position: 'absolute', bottom: 20, right: 20, width: 56, height: 56, borderRadius: 28, backgroundColor: CORES.azul700, alignItems: 'center', justifyContent: 'center', elevation: 6},
 });
