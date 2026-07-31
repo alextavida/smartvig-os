@@ -174,6 +174,17 @@ class GestaoClickAPI
         return $this->post('orcamentos/', $dados);
     }
 
+    public function listarOrcamentos(int $pagina = 1): array
+    {
+        return $this->get('orcamentos/', ['pagina' => $pagina]);
+    }
+
+    public function visualizarOrcamentoGC(int $gcOrcId): array
+    {
+        $resposta = $this->get("orcamentos/{$gcOrcId}/");
+        return $resposta['data'] ?? $resposta;
+    }
+
     public function listarRecebimentos(array $parametros = []): array
     {
         return $this->get('recebimentos/', $parametros);
