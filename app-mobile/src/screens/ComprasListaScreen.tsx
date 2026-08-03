@@ -144,7 +144,7 @@ export function ComprasListaScreen({navigation}: Props) {
       />
 
       {carregando ? (
-        <ActivityIndicator size="large" color={CORES.azul} style={{marginTop: 40}} />
+        <ActivityIndicator size="large" color={CORES.azul700} style={{marginTop: 40}} />
       ) : erro ? (
         <View style={estilos.erroBox}>
           <Text style={estilos.erroText}>{erro}</Text>
