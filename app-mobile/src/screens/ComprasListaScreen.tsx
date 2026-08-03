@@ -11,7 +11,6 @@ import {
 import {NativeStackScreenProps} from '@react-navigation/native-stack';
 import {listarCompras} from '../api/compras';
 import {SolicitacaoCompra} from '../types';
-import {useAuth} from '../hooks/useAuth';
 import {CORES} from '../config';
 import {RootStackParamList} from '../navigation';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -69,7 +68,6 @@ function formatarData(s: string): string {
 }
 
 export function ComprasListaScreen({navigation}: Props) {
-  const {usuario} = useAuth();
   const [abaAtiva, setAbaAtiva] = useState('');
   const [lista, setLista] = useState<SolicitacaoCompra[]>([]);
   const [carregando, setCarregando] = useState(true);
@@ -100,23 +98,25 @@ export function ComprasListaScreen({navigation}: Props) {
     >
       <View style={estilos.cardHeader}>
         <Text style={estilos.numero}>{item.numero}</Text>
-        <View style={[estilos.badge, {backgroundColor: STATUS_COR[item.status] + '22'}]}>
-          <Text style={[estilos.badgeText, {color: STATUS_COR[item.status]}]}>
+        <View style={[estilos.badge, {backgroundColor: (STATUS_COR[item.status] ?? '#94a3b8') + '22'}]}>
+          <Text style={[estilos.badgeText, {color: STATUS_COR[item.status] ?? '#94a3b8'}]}>
             {STATUS_LABEL[item.status] ?? item.status}
           </Text>
         </View>
       </View>
-      <Text style={estilos.solicitante}>{item.solicitante_nome}</Text>
-      {item.categoria_nome && <Text style={estilos.categoria}>{item.categoria_nome}</Text>}
-      <Text style={estilos.justificativa} numberOfLines={2}>{item.justificativa}</Text>
+      <Text style={estilos.solicitante}>{item.solicitante_nome ?? ''}</Text>
+      {item.categoria_nome ? <Text style={estilos.categoria}>{item.categoria_nome}</Text> : null}
+      <Text style={estilos.justificativa} numberOfLines={2}>{item.justificativa ?? ''}</Text>
       <View style={estilos.cardFooter}>
-        <View style={[estilos.priorBadge, {backgroundColor: PRIORIDADE_COR[item.prioridade] + '22'}]}>
-          <Text style={[estilos.priorText, {color: PRIORIDADE_COR[item.prioridade]}]}>
-            {item.prioridade.toUpperCase()}
-          </Text>
-        </View>
-        <Text style={estilos.valor}>{formatarMoeda(item.valor_final ?? item.valor_negociado ?? item.valor_estimado)}</Text>
-        <Text style={estilos.data}>{formatarData(item.criado_em)}</Text>
+        {item.prioridade ? (
+          <View style={[estilos.priorBadge, {backgroundColor: (PRIORIDADE_COR[item.prioridade] ?? '#94a3b8') + '22'}]}>
+            <Text style={[estilos.priorText, {color: PRIORIDADE_COR[item.prioridade] ?? '#94a3b8'}]}>
+              {item.prioridade.toUpperCase()}
+            </Text>
+          </View>
+        ) : null}
+        <Text style={estilos.valor}>{formatarMoeda((item as any).valor_final ?? item.valor_negociado ?? item.valor_estimado)}</Text>
+        <Text style={estilos.data}>{item.criado_em ? formatarData(item.criado_em) : ''}</Text>
       </View>
     </TouchableOpacity>
   );

@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   View,
   Text,
@@ -10,9 +10,10 @@ import {
   ScrollView,
   ActivityIndicator,
   Image,
+  Switch,
 } from 'react-native';
 import {login} from '../api/auth';
-import {salvarSessao} from '../storage';
+import {salvarSessao, salvarCredenciais, obterCredenciais, limparCredenciais} from '../storage';
 import {useAuth} from '../hooks/useAuth';
 import {CORES} from '../config';
 
@@ -20,10 +21,23 @@ const LOGO = require('../assets/logo.png');
 
 export function LoginScreen() {
   const {fazerLogin} = useAuth();
-  const [email, setEmail] = useState('');
-  const [senha, setSenha] = useState('');
+  const [email, setEmail]         = useState('');
+  const [senha, setSenha]         = useState('');
+  const [lembrar, setLembrar]     = useState(false);
   const [carregando, setCarregando] = useState(false);
-  const [erro, setErro] = useState('');
+  const [erro, setErro]           = useState('');
+
+  // Carrega credenciais salvas ao abrir a tela
+  useEffect(() => {
+    (async () => {
+      const cred = await obterCredenciais();
+      if (cred) {
+        setEmail(cred.email);
+        setSenha(cred.senha);
+        setLembrar(true);
+      }
+    })();
+  }, []);
 
   async function entrar() {
     if (!email.trim() || !senha.trim()) {
@@ -36,6 +50,11 @@ export function LoginScreen() {
 
     try {
       const usuario = await login(email.trim().toLowerCase(), senha);
+      if (lembrar) {
+        await salvarCredenciais(email.trim().toLowerCase(), senha);
+      } else {
+        await limparCredenciais();
+      }
       await salvarSessao(usuario);
       await fazerLogin(usuario);
     } catch (e: any) {
@@ -107,6 +126,22 @@ export function LoginScreen() {
             onSubmitEditing={entrar}
             editable={!carregando}
           />
+
+          {/* Toggle Salvar login */}
+          <TouchableOpacity
+            style={estilos.lembrarRow}
+            onPress={() => setLembrar(v => !v)}
+            activeOpacity={0.7}
+          >
+            <Switch
+              value={lembrar}
+              onValueChange={setLembrar}
+              trackColor={{false: CORES.cinza300, true: CORES.azul500}}
+              thumbColor={lembrar ? CORES.azul700 : '#fff'}
+              ios_backgroundColor={CORES.cinza300}
+            />
+            <Text style={estilos.lembrarText}>Salvar login</Text>
+          </TouchableOpacity>
 
           <TouchableOpacity
             style={[estilos.botao, carregando && estilos.botaoDesabilitado]}
@@ -235,6 +270,18 @@ const estilos = StyleSheet.create({
     color: CORES.cinza900,
     marginBottom: 16,
     backgroundColor: CORES.cinza100,
+  },
+  lembrarRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 16,
+    paddingVertical: 4,
+  },
+  lembrarText: {
+    fontSize: 14,
+    color: CORES.cinza700,
+    fontWeight: '500',
   },
   botao: {
     backgroundColor: CORES.azul700,

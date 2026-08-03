@@ -4,6 +4,8 @@ import {Usuario} from '../types';
 const KEYS = {
   JWT: '@smartvig:jwt',
   USUARIO: '@smartvig:usuario',
+  CRED_EMAIL: '@smartvig:cred_email',
+  CRED_SENHA: '@smartvig:cred_senha',
 };
 
 export async function salvarSessao(usuario: Usuario): Promise<void> {
@@ -29,4 +31,21 @@ export async function obterUsuario(): Promise<Usuario | null> {
 
 export async function limparSessao(): Promise<void> {
   await AsyncStorage.multiRemove([KEYS.JWT, KEYS.USUARIO]);
+}
+
+export async function salvarCredenciais(email: string, senha: string): Promise<void> {
+  await AsyncStorage.multiSet([
+    [KEYS.CRED_EMAIL, email],
+    [KEYS.CRED_SENHA, senha],
+  ]);
+}
+
+export async function obterCredenciais(): Promise<{email: string; senha: string} | null> {
+  const [[, email], [, senha]] = await AsyncStorage.multiGet([KEYS.CRED_EMAIL, KEYS.CRED_SENHA]);
+  if (!email || !senha) { return null; }
+  return {email, senha};
+}
+
+export async function limparCredenciais(): Promise<void> {
+  await AsyncStorage.multiRemove([KEYS.CRED_EMAIL, KEYS.CRED_SENHA]);
 }
