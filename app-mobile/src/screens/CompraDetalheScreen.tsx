@@ -134,7 +134,11 @@ export function CompraDetalheScreen({navigation, route}: Props) {
   };
 
   if (carregando || !compra) {
-    return <ActivityIndicator size="large" color={CORES.azul} style={{marginTop: 60}} />;
+    return (
+      <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+        <ActivityIndicator size="large" color={CORES.azul700} />
+      </View>
+    );
   }
 
   const isAprovador = usuario ? temRoleCompras(usuario, 'aprovador') : false;
@@ -233,7 +237,7 @@ export function CompraDetalheScreen({navigation, route}: Props) {
         <View style={estilos.card}>
           <Text style={estilos.secTitle}>Ações</Text>
           {isMeuRascunho && (
-            <TouchableOpacity style={[estilos.btn, {backgroundColor: CORES.azul}]} onPress={enviar}>
+            <TouchableOpacity style={[estilos.btn, {backgroundColor: CORES.azul700}]} onPress={enviar}>
               <Text style={estilos.btnText}>Enviar para Aprovação</Text>
             </TouchableOpacity>
           )}
@@ -255,7 +259,7 @@ export function CompraDetalheScreen({navigation, route}: Props) {
           )}
         </View>
       )}
-      {processando && <ActivityIndicator color={CORES.azul} style={{marginVertical: 16}} />}
+      {processando && <ActivityIndicator color={CORES.azul700} style={{marginVertical: 16}} />}
 
       {/* Histórico */}
       {compra.historico?.length > 0 && (
@@ -305,7 +309,7 @@ const estilos = StyleSheet.create({
   container: {flex: 1, backgroundColor: '#f4f8fd'},
   card: {backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 10, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 6, elevation: 2},
   row: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6},
-  row2: {flexDirection: 'row', gap: 12, marginTop: 4},
+  row2: {flexDirection: 'row', marginTop: 4},
   numero: {fontSize: 15, fontWeight: '700', color: '#1e3a5f'},
   badge: {paddingHorizontal: 10, paddingVertical: 3, borderRadius: 12},
   badgeText: {fontSize: 11, fontWeight: '700'},

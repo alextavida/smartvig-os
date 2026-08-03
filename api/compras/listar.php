@@ -77,17 +77,19 @@ $total = (int) $stmtTotal->fetchColumn();
 
 $sql = "
     SELECT sc.id, sc.numero, sc.status, sc.prioridade, sc.destino, sc.destino_referencia,
-           sc.justificativa, sc.valor_estimado, sc.valor_final, sc.criado_em, sc.atualizado_em,
+           sc.justificativa, sc.valor_estimado, sc.valor_negociado, sc.valor_final, sc.criado_em, sc.atualizado_em,
            sol.nome AS solicitante_nome,
            comp.nome AS comprador_nome,
            f.nome AS fornecedor_nome,
            cc.nome AS centro_custo_nome,
+           cat.nome AS categoria_nome,
            (SELECT COUNT(*) FROM solicitacao_itens si WHERE si.solicitacao_id = sc.id) AS total_itens
     FROM solicitacoes_compra sc
     LEFT JOIN usuarios sol  ON sol.id  = sc.solicitante_id
     LEFT JOIN usuarios comp ON comp.id = sc.comprador_id
     LEFT JOIN fornecedores f ON f.id   = sc.fornecedor_id
     LEFT JOIN centros_custo cc ON cc.id = sc.centro_custo_id
+    LEFT JOIN categorias_compra cat ON cat.id = sc.categoria_id
     WHERE $whereStr
     ORDER BY FIELD(sc.prioridade,'urgente','alta','media','baixa'), sc.criado_em DESC
     LIMIT :limit OFFSET :offset
